@@ -1,0 +1,15 @@
+# Local Python and editor files
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+.env
+*.env
+
+# Runtime output and private source material
+bilibili-notes/
+youtube-notes/
+cookies/
+*cookies*.txt
+*.cookies
+

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Bilibili Video Digest"
+  short_description: "B站视频笔记与 Telegram 推送"
+  default_prompt: "使用 $bilibili-video-digest 提取 B 站视频字幕，生成中文笔记并按要求发送到 Telegram。"

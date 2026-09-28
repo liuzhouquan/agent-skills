@@ -1,0 +1,4 @@
+interface:
+  display_name: "YouTube Video Digest"
+  short_description: "YouTube 视频笔记与 Telegram 推送"
+  default_prompt: "使用 $youtube-video-digest 提取 YouTube 视频字幕，生成中文笔记并按要求发送到 Telegram。"
