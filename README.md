@@ -6,7 +6,7 @@
 
 ### `bilibili-video-digest`
 
-处理 B 站视频链接：获取字幕和元数据，生成带时间戳的中文笔记，并按要求发送到 Telegram。支持显式提供 Netscape 格式 Cookie。
+处理 B 站视频链接：获取字幕和元数据，生成带时间戳的中文笔记，并按要求发送到 Telegram。支持显式提供 Netscape 格式 Cookie，以及 `1-3,7-9` 形式的多分集批量处理。
 
 ### `youtube-video-digest`
 

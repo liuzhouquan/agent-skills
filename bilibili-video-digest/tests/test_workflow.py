@@ -150,6 +150,13 @@ class SubtitleTests(TemporaryFiles):
 
 
 class FetchTests(TemporaryFiles):
+    def test_parts_expression_supports_ranges_and_discrete_parts(self):
+        self.assertEqual(fetch.parse_parts("1~3,7,8,9"), [1, 2, 3, 7, 8, 9])
+
+    def test_parts_expression_rejects_reversed_range(self):
+        with self.assertRaises(ValueError):
+            fetch.parse_parts("3-1")
+
     def test_multipart_url_without_part_stops_before_download(self):
         playlist = json.dumps({
             "_type": "playlist", "id": "BVseries", "title": "课程", "playlist_count": 23,
@@ -163,6 +170,36 @@ class FetchTests(TemporaryFiles):
             self.assertEqual(fetch.main(), 5)
         self.assertEqual(run.call_count, 1)
         self.assertFalse((self.root / "BVseries").exists())
+
+    def test_batch_parts_downloads_and_combines_selected_transcripts(self):
+        playlist = subprocess.CompletedProcess([], 0, json.dumps({
+            "_type": "playlist", "id": "BVseries", "title": "课程", "playlist_count": 4,
+            "entries": [],
+        }), "")
+        results = [playlist]
+        for part in (1, 2, 4):
+            folder = self.root / f"BVseries_p{part}"
+            folder.mkdir()
+            (folder / f"BVseries_p{part}.zh-Hans.srt").write_text(
+                f"1\n00:00:01,000 --> 00:00:02,000\n第{part}集内容\n", encoding="utf-8"
+            )
+            results.append(subprocess.CompletedProcess(
+                [], 0, json.dumps({"id": f"BVseries_p{part}", "title": f"课程 p{part:02d}"}), ""
+            ))
+        with patch.object(fetch, "yt_dlp_command", return_value="/fake/yt-dlp"), \
+                patch.object(fetch.subprocess, "run", side_effect=results) as run, \
+                patch.object(sys, "argv", ["fetch", "https://www.bilibili.com/video/BVseries", "--parts", "1-2,4", "--output", str(self.root)]), \
+                contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(fetch.main(), 0)
+        self.assertEqual(run.call_count, 4)
+        combined = self.root / "BVseries" / "combined-transcript.txt"
+        content = combined.read_text(encoding="utf-8")
+        self.assertIn("第1集内容", content)
+        self.assertIn("第2集内容", content)
+        self.assertIn("第4集内容", content)
+        self.assertNotIn("第3集内容", content)
+        series_manifest = json.loads((self.root / "BVseries" / "series-manifest.json").read_text(encoding="utf-8"))
+        self.assertEqual(series_manifest["status"], "transcript-ready")
 
     def test_explicit_part_skips_probe_and_processes_selected_part(self):
         folder = self.root / "BVseries_p2"
