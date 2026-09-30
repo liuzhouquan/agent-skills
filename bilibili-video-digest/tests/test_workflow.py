@@ -150,6 +150,33 @@ class SubtitleTests(TemporaryFiles):
 
 
 class FetchTests(TemporaryFiles):
+    def test_multipart_url_without_part_stops_before_download(self):
+        playlist = json.dumps({
+            "_type": "playlist", "id": "BVseries", "title": "课程", "playlist_count": 23,
+            "entries": [{"_type": "url", "url": "https://www.bilibili.com/video/BVseries?p=1"}],
+        })
+        fake = subprocess.CompletedProcess([], 0, playlist, "")
+        with patch.object(fetch, "yt_dlp_command", return_value="/fake/yt-dlp"), \
+                patch.object(fetch.subprocess, "run", return_value=fake) as run, \
+                patch.object(sys, "argv", ["fetch", "https://www.bilibili.com/video/BVseries", "--output", str(self.root)]), \
+                contextlib.redirect_stderr(io.StringIO()):
+            self.assertEqual(fetch.main(), 5)
+        self.assertEqual(run.call_count, 1)
+        self.assertFalse((self.root / "BVseries").exists())
+
+    def test_explicit_part_skips_probe_and_processes_selected_part(self):
+        folder = self.root / "BVseries_p2"
+        folder.mkdir()
+        (folder / "BVseries_p2.zh-Hans.srt").write_text("1\n00:00:01,000 --> 00:00:02,000\n第二集\n", encoding="utf-8")
+        fake = subprocess.CompletedProcess([], 0, json.dumps({"id": "BVseries_p2", "title": "课程 p02"}), "")
+        with patch.object(fetch, "yt_dlp_command", return_value="/fake/yt-dlp"), \
+                patch.object(fetch.subprocess, "run", return_value=fake) as run, \
+                patch.object(sys, "argv", ["fetch", "https://www.bilibili.com/video/BVseries?p=2", "--output", str(self.root)]), \
+                contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(fetch.main(), 0)
+        self.assertEqual(run.call_count, 1)
+        self.assertIn("第二集", (folder / "transcript.txt").read_text(encoding="utf-8"))
+
     def test_cached_subtitle_is_success_and_generates_transcript(self):
         folder = self.root / "BVexample"
         folder.mkdir()

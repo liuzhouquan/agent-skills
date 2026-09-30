@@ -10,7 +10,7 @@ import shutil
 import subprocess
 import sys
 from pathlib import Path
-from urllib.parse import urlparse
+from urllib.parse import parse_qs, urlparse
 
 from subtitle_to_text import convert
 
@@ -44,6 +44,54 @@ def preferred_subtitle(paths: list[Path]) -> Path:
     return min(paths, key=rank)
 
 
+def metadata_from_output(output: str) -> list[dict]:
+    metadata = []
+    for line in output.splitlines():
+        try:
+            info = json.loads(line)
+        except ValueError:
+            continue
+        if isinstance(info, dict) and isinstance(info.get("id"), str):
+            metadata.append(info)
+    return metadata
+
+
+def cookie_args(args: argparse.Namespace, parser: argparse.ArgumentParser) -> list[str]:
+    if args.cookies:
+        path = args.cookies.expanduser().resolve()
+        if not path.is_file():
+            parser.error("cookies file does not exist")
+        return ["--cookies", str(path)]
+    if args.cookies_from_browser:
+        return ["--cookies-from-browser", args.cookies_from_browser]
+    return []
+
+
+def selected_part(url: str) -> int | None:
+    values = parse_qs(urlparse(url).query).get("p", [])
+    if not values:
+        return None
+    if len(values) != 1 or not values[0].isdigit() or int(values[0]) < 1:
+        raise ValueError("URL 中的 p 参数必须是正整数，例如 ?p=2")
+    return int(values[0])
+
+
+def probe_metadata(executable: str, url: str, cookies: list[str]) -> dict | None:
+    command = [
+        executable, "--ignore-config", "--flat-playlist", "--dump-single-json", "--skip-download",
+        "--no-warnings", "--socket-timeout", "20", "--retries", "2",
+        *cookies, "--", url,
+    ]
+    try:
+        result = subprocess.run(command, text=True, capture_output=True, timeout=90, check=False)
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    if result.returncode:
+        return None
+    values = metadata_from_output(result.stdout)
+    return values[0] if values else None
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("url")
@@ -63,6 +111,26 @@ def main() -> int:
     if executable is None:
         print("未找到 yt-dlp。请在隔离 Python 环境安装，或设置 BILIBILI_YT_DLP。", file=sys.stderr)
         return 2
+    try:
+        part = selected_part(args.url)
+    except ValueError as error:
+        parser.error(str(error))
+    cookies = cookie_args(args, parser)
+    if part is None:
+        probe = probe_metadata(executable, args.url, cookies)
+        if probe is None:
+            print("无法判断该链接是否包含多分集内容；为避免默认处理第 1 集，已停止。", file=sys.stderr)
+            return 3
+        if probe.get("_type") == "playlist":
+            count = probe.get("playlist_count") or len(probe.get("entries") or [])
+            if count and int(count) > 1:
+                title = probe.get("title") or probe.get("id") or "该视频"
+                print(
+                    f"检测到“{title}”包含 {count} 个分集。请在链接后指定 ?p=1、?p=2 等分集；"
+                    "本次未下载字幕。",
+                    file=sys.stderr,
+                )
+                return 5
     output = args.output.expanduser().resolve()
     output.mkdir(parents=True, exist_ok=True)
     command = [
@@ -73,13 +141,7 @@ def main() -> int:
         "--sub-format", "srt/vtt/best",
         "-o", str(output / "%(id)s" / "%(id)s.%(ext)s"),
     ]
-    if args.cookies:
-        path = args.cookies.expanduser().resolve()
-        if not path.is_file():
-            parser.error("cookies file does not exist")
-        command.extend(["--cookies", str(path)])
-    elif args.cookies_from_browser:
-        command.extend(["--cookies-from-browser", args.cookies_from_browser])
+    command.extend(cookies)
     command.extend(["--", args.url])
     try:
         result = subprocess.run(command, text=True, capture_output=True, timeout=180, check=False)
@@ -88,20 +150,13 @@ def main() -> int:
         return 2
     if result.stderr:
         print(result.stderr, file=sys.stderr, end="")
-    metadata = []
-    for line in result.stdout.splitlines():
-        try:
-            info = json.loads(line)
-        except ValueError:
-            continue
-        if isinstance(info, dict) and isinstance(info.get("id"), str):
-            metadata.append(info)
-    if result.returncode:
-        print(f"下载未完成（yt-dlp 退出码 {result.returncode}）。", file=sys.stderr)
-        return 3
+    metadata = metadata_from_output(result.stdout)
     if not metadata:
         print("yt-dlp 未返回视频元数据。", file=sys.stderr)
         return 3
+    download_failed = bool(result.returncode)
+    if download_failed:
+        print(f"下载未完成（yt-dlp 退出码 {result.returncode}），继续检查已保存的字幕。", file=sys.stderr)
 
     missing = False
     for info in metadata:
@@ -135,6 +190,8 @@ def main() -> int:
         (folder / "manifest.json").write_text(
             json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8",
         )
+    if download_failed and not missing:
+        return 3
     return 4 if missing else 0
 
 
