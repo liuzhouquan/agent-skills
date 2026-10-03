@@ -13,6 +13,7 @@ import sys
 from pathlib import Path
 from urllib.parse import parse_qs, parse_qsl, urlencode, urlparse, urlunparse
 
+from cookie_config import cookie_files
 from subtitle_to_text import convert
 
 
@@ -58,15 +59,18 @@ def metadata_from_output(output: str) -> list[dict]:
     return metadata
 
 
-def cookie_args(args: argparse.Namespace, parser: argparse.ArgumentParser) -> list[str]:
+def cookie_options(args: argparse.Namespace, parser: argparse.ArgumentParser) -> list[list[str]]:
     if args.cookies:
         path = args.cookies.expanduser().resolve()
         if not path.is_file():
             parser.error("cookies file does not exist")
-        return ["--cookies", str(path)]
+        return [["--cookies", str(path)]]
     if args.cookies_from_browser:
-        return ["--cookies-from-browser", args.cookies_from_browser]
-    return []
+        return [["--cookies-from-browser", args.cookies_from_browser]]
+    files = cookie_files(args.cookie_dir)
+    if not files:
+        return [[]]
+    return [["--cookies", str(path)] for path in files] + [[]]
 
 
 def selected_part(url: str) -> int | None:
@@ -142,6 +146,26 @@ def safe_video_id(video_id: str) -> bool:
     return video_id not in {".", ".."} and not any(char in video_id for char in "/\\")
 
 
+def has_subtitles(metadata: list[dict], output: Path) -> bool:
+    return any(subtitle_files(output / info["id"]) for info in metadata if safe_video_id(info["id"]))
+
+
+def run_with_cookie_options(
+    executable: str, url: str, output: Path, sub_langs: str, options: list[list[str]]
+):
+    last_result = None
+    last_metadata: list[dict] = []
+    attempts = 0
+    for cookies in options:
+        attempts += 1
+        result = run_download(executable, url, output, sub_langs, cookies)
+        metadata = metadata_from_output(result.stdout)
+        last_result, last_metadata = result, metadata
+        if metadata and has_subtitles(metadata, output):
+            return result, metadata, attempts
+    return last_result, last_metadata, attempts
+
+
 def process_info(info: dict, source_url: str, output: Path) -> tuple[dict, bool]:
     video_id = info["id"]
     if not safe_video_id(video_id):
@@ -203,6 +227,7 @@ def main() -> int:
     parser.add_argument("--output", type=Path, default=Path("bilibili-notes"))
     parser.add_argument("--sub-langs", default="all,-danmaku")
     parser.add_argument("--parts", help="batch parts, e.g. 1-3,7-9; requires a multi-part URL without ?p=")
+    parser.add_argument("--cookie-dir", action="append", help="search this Bilibili Cookie directory; may be repeated")
     cookies = parser.add_mutually_exclusive_group()
     cookies.add_argument("--cookies-from-browser", metavar="BROWSER")
     cookies.add_argument("--cookies", type=Path, help="local Netscape-format cookies file")
@@ -224,11 +249,15 @@ def main() -> int:
     if executable is None:
         print("未找到 yt-dlp。请在隔离 Python 环境安装，或设置 BILIBILI_YT_DLP。", file=sys.stderr)
         return 2
-    cookies = cookie_args(args, parser)
+    cookie_sets = cookie_options(args, parser)
     if explicit_part is not None:
         targets = [(explicit_part, args.url)]
     else:
-        probe = probe_metadata(executable, args.url, cookies)
+        probe = None
+        for cookies in cookie_sets:
+            probe = probe_metadata(executable, args.url, cookies)
+            if probe is not None:
+                break
         if probe is None:
             print("无法判断该链接是否包含多分集内容；为避免默认处理第 1 集，已停止。", file=sys.stderr)
             return 3
@@ -259,14 +288,21 @@ def main() -> int:
     failed = False
     for part, target in targets:
         try:
-            result = run_download(executable, target, output, args.sub_langs, cookies)
+            result, metadata, attempts = run_with_cookie_options(
+                executable, target, output, args.sub_langs, cookie_sets
+            )
         except (OSError, subprocess.TimeoutExpired):
             print(f"{target}：yt-dlp 启动失败或超过 180 秒。", file=sys.stderr)
             failed = True
             continue
+        if result is None:
+            print(f"{target}：没有可用的 Cookie 或 yt-dlp 没有返回结果。", file=sys.stderr)
+            failed = True
+            continue
         if result.stderr:
             print(result.stderr, file=sys.stderr, end="")
-        metadata = metadata_from_output(result.stdout)
+        if attempts > 1:
+            print(f"{target}：已尝试 {attempts} 个 Cookie 配置。", file=sys.stderr)
         if not metadata:
             print(f"{target}：yt-dlp 未返回视频元数据。", file=sys.stderr)
             failed = True

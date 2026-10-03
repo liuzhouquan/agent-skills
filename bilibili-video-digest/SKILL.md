@@ -41,6 +41,17 @@ Use an explicitly supplied Netscape-format cookie file:
 python3 <skill-dir>/scripts/fetch_bilibili.py "B站链接" --cookies "/path/to/bilibili.cookies.txt"
 ```
 
+For recurring use, register one or more absolute directories that contain files named like `www.bilibili.com_cookies.txt`:
+
+```bash
+python3 <skill-dir>/scripts/configure_cookies.py --add-dir "/absolute/path/to/cookies"
+python3 <skill-dir>/scripts/configure_cookies.py --list
+```
+
+The private registry is stored at `~/.config/bilibili-video-digest/cookie-dirs.txt`, independent of the skill's installation location. The downloader searches registered directories, `BILIBILI_COOKIE_DIRS`, and an optional repeated `--cookie-dir` argument. Automatic discovery only accepts filenames containing both `bilibili` and `cookie`; pass `--cookies` explicitly for any differently named file. It tries the newest matching export first and can fall back to older registered exports.
+
+If no matching file is found, or all candidates still produce a login-only subtitle response, ask the user for an absolute Cookie directory and register it with `configure_cookies.py`. Never put the directory path or Cookie contents in the public skills repository.
+
 Local browser access can use `--cookies-from-browser firefox` or `chrome` when already authorized. Windows browser cookies are not automatically readable from WSL; avoid guessing/decrypting Windows profiles. Report the concrete login or network blocker.
 
 This helper has no built-in speech transcription or video-frame extraction. If no accessible subtitle exists, use separately available audio/video tools when the task permits and report missing dependencies. Do not describe an unimplemented fallback as completed.

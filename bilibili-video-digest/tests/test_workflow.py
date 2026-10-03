@@ -20,6 +20,7 @@ import setup_telegram as setup
 import send_telegram as sender
 import subtitle_to_text as subtitle
 import fetch_bilibili as fetch
+import cookie_config
 
 
 class TemporaryFiles(unittest.TestCase):
@@ -53,6 +54,28 @@ class CredentialTests(TemporaryFiles):
         self.assertEqual(stat.S_IMODE(path.stat().st_mode), 0o600)
         self.assertEqual(common.read_config(path)["TELEGRAM_CHAT_ID"], "42")
         self.assertEqual(sorted(p.name for p in self.root.iterdir()), ["config"])
+
+
+class CookieConfigTests(TemporaryFiles):
+    def test_discovery_only_accepts_bilibili_cookie_names(self):
+        directory = self.root / "cookies"
+        directory.mkdir()
+        (directory / "www.bilibili.com_cookies.txt").write_text("# Netscape\n", encoding="utf-8")
+        (directory / "youtube_cookies.txt").write_text("# Netscape\n", encoding="utf-8")
+        (directory / "random.txt").write_text("# Netscape\n", encoding="utf-8")
+        config = self.root / "cookie-dirs.txt"
+        with patch.dict(os.environ, {"BILIBILI_COOKIE_DIRS": str(directory)}, clear=False), \
+                patch.object(cookie_config, "config_path", return_value=config):
+            self.assertEqual([p.name for p in cookie_config.cookie_files()], ["www.bilibili.com_cookies.txt"])
+
+    def test_directory_registration_is_persistent(self):
+        directory = self.root / "cookies"
+        directory.mkdir()
+        config = self.root / "nested" / "cookie-dirs.txt"
+        with patch.object(cookie_config, "config_path", return_value=config):
+            self.assertEqual(cookie_config.add_dir(directory), directory.resolve())
+            self.assertEqual(cookie_config.configured_dirs(), [directory.resolve()])
+        self.assertEqual(config.stat().st_mode & 0o777, 0o600)
 
     def test_failed_replace_preserves_old_configuration(self):
         path = self.write("config", "old")
