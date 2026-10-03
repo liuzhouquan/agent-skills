@@ -15,6 +15,7 @@ from urllib.parse import parse_qs, parse_qsl, urlencode, urlparse, urlunparse
 
 from cookie_config import cookie_files
 from subtitle_to_text import convert
+from user_config import config_path, ensure_config
 
 
 def yt_dlp_command() -> str | None:
@@ -224,7 +225,7 @@ def write_series_transcript(output: Path, source_url: str, records: list[dict], 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("url")
-    parser.add_argument("--output", type=Path, default=Path("bilibili-notes"))
+    parser.add_argument("--output", type=Path, help="override the configured note directory")
     parser.add_argument("--sub-langs", default="all,-danmaku")
     parser.add_argument("--parts", help="batch parts, e.g. 1-3,7-9; requires a multi-part URL without ?p=")
     parser.add_argument("--cookie-dir", action="append", help="search this Bilibili Cookie directory; may be repeated")
@@ -245,10 +246,19 @@ def main() -> int:
     if explicit_part is not None and requested_parts is not None:
         parser.error("URL 已指定 ?p= 时不能再使用 --parts")
 
+    try:
+        config, created = ensure_config()
+    except (OSError, ValueError) as error:
+        print(f"无法读取 Bilibili digest 配置：{error}", file=sys.stderr)
+        return 2
+    if created:
+        print(f"已创建配置模板：{config_path()}")
     executable = yt_dlp_command()
     if executable is None:
         print("未找到 yt-dlp。请在隔离 Python 环境安装，或设置 BILIBILI_YT_DLP。", file=sys.stderr)
         return 2
+    notes_dir = args.output or Path(os.environ.get("BILIBILI_NOTES_DIR", config["notes_dir"])).expanduser()
+    output = notes_dir.resolve()
     cookie_sets = cookie_options(args, parser)
     if explicit_part is not None:
         targets = [(explicit_part, args.url)]
@@ -281,7 +291,6 @@ def main() -> int:
                 return 5
             targets = [(None, args.url)]
 
-    output = args.output.expanduser().resolve()
     output.mkdir(parents=True, exist_ok=True)
     records = []
     missing = False

@@ -17,7 +17,15 @@ Run the helper from the skill's own directory (resolve its path; do not assume t
 python3 <skill-dir>/scripts/fetch_bilibili.py "https://www.bilibili.com/video/BV.../?p=1"
 ```
 
-The helper uses the existing user-level yt-dlp runtime, downloads subtitles and metadata, and creates `bilibili-notes/<video-id>/transcript.txt` plus `manifest.json`. It reuses cached subtitles on reruns, prefers human Chinese subtitles over Chinese AI subtitles, and excludes danmaku. Read the manifest and the entire transcript before writing `note.md` beside them.
+The helper uses the existing user-level yt-dlp runtime, downloads subtitles and metadata, and creates `<notes-dir>/<video-id>/transcript.txt` plus `manifest.json`. The note directory comes from the private user config; the current setup uses `/home/lzq/projects/bilibili-notes`. It reuses cached subtitles on reruns, prefers human Chinese subtitles over Chinese AI subtitles, and excludes danmaku. Read the manifest and the entire transcript before writing `note.md` beside them.
+
+The private config is `~/.config/bilibili-video-digest/config.json`. If it does not exist, the helper creates a template containing no tokens or Cookie values. Set the persistent note directory with:
+
+```bash
+python3 <skill-dir>/scripts/configure_cookies.py --set-notes-dir "/absolute/path/to/bilibili-notes"
+```
+
+Use `--output` for a one-off override. Do not commit the config file to the public skills repository.
 
 Preserve the requested `?p=` part. Before downloading a URL without `?p=`, the helper performs a metadata-only probe. If it detects a multi-part course, it stops and reports the number of parts instead of silently selecting part 1. For a user request such as “第 1～3 集和第 7～9 集”, normalize the parts to `1-3,7-9` and run:
 
@@ -48,7 +56,7 @@ python3 <skill-dir>/scripts/configure_cookies.py --add-dir "/absolute/path/to/co
 python3 <skill-dir>/scripts/configure_cookies.py --list
 ```
 
-The private registry is stored at `~/.config/bilibili-video-digest/cookie-dirs.txt`, independent of the skill's installation location. The downloader searches registered directories, `BILIBILI_COOKIE_DIRS`, and an optional repeated `--cookie-dir` argument. Automatic discovery only accepts filenames containing both `bilibili` and `cookie`; pass `--cookies` explicitly for any differently named file. It tries the newest matching export first and can fall back to older registered exports.
+The directories are stored in the private `cookie_dirs` field of `~/.config/bilibili-video-digest/config.json`, independent of the skill's installation location. The downloader searches registered directories, `BILIBILI_COOKIE_DIRS`, and an optional repeated `--cookie-dir` argument. Automatic discovery only accepts filenames containing both `bilibili` and `cookie`; pass `--cookies` explicitly for any differently named file. It tries the newest matching export first and can fall back to older registered exports.
 
 If no matching file is found, or all candidates still produce a login-only subtitle response, ask the user for an absolute Cookie directory and register it with `configure_cookies.py`. Never put the directory path or Cookie contents in the public skills repository.
 

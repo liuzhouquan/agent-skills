@@ -5,6 +5,9 @@ __pycache__/
 .venv/
 .env
 *.env
+config.json
+config.local.json
+cookie-dirs.txt
 
 # Runtime output and private source material
 bilibili-notes/
@@ -12,4 +15,3 @@ youtube-notes/
 cookies/
 *cookies*.txt
 *.cookies
-

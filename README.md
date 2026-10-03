@@ -30,11 +30,15 @@ cp -a agent-skills/youtube-video-digest ~/.codex/skills/
 
 Telegram 配置默认读取 `~/.config/bilibili-video-digest/telegram.env`，两个 skill 可以共用同一个 Bot 和目标聊天。
 
-B 站 Cookie 目录可以单独登记，不受 skill 安装位置影响：
+B 站的笔记目录和 Cookie 目录保存在本机私有配置中，不受 skill 安装位置影响：
 
 ```bash
-python3 ~/.codex/skills/bilibili-video-digest/scripts/configure_cookies.py --add-dir "/absolute/path/to/cookies"
+python3 ~/.agents/skills/bilibili-video-digest/scripts/configure_cookies.py --init
+python3 ~/.agents/skills/bilibili-video-digest/scripts/configure_cookies.py --set-notes-dir "/absolute/path/to/bilibili-notes"
+python3 ~/.agents/skills/bilibili-video-digest/scripts/configure_cookies.py --add-dir "/absolute/path/to/cookies"
 ```
+
+配置文件默认是 `~/.config/bilibili-video-digest/config.json`，不会提交到 GitHub。首次运行时如果文件不存在，skill 会自动生成不含隐私信息的模板。
 
 ## 本地验证
 

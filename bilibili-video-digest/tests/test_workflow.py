@@ -21,6 +21,7 @@ import send_telegram as sender
 import subtitle_to_text as subtitle
 import fetch_bilibili as fetch
 import cookie_config
+import user_config
 
 
 class TemporaryFiles(unittest.TestCase):
@@ -55,6 +56,14 @@ class CredentialTests(TemporaryFiles):
         self.assertEqual(common.read_config(path)["TELEGRAM_CHAT_ID"], "42")
         self.assertEqual(sorted(p.name for p in self.root.iterdir()), ["config"])
 
+    def test_failed_replace_preserves_old_configuration(self):
+        path = self.write("config", "old")
+        with patch.object(common.os, "replace", side_effect=OSError("disk error")):
+            with self.assertRaises(OSError):
+                common.save_config("123:FAKE", "42", path)
+        self.assertEqual(path.read_text(), "old")
+        self.assertEqual(sorted(p.name for p in self.root.iterdir()), ["config"])
+
 
 class CookieConfigTests(TemporaryFiles):
     def test_discovery_only_accepts_bilibili_cookie_names(self):
@@ -63,27 +72,35 @@ class CookieConfigTests(TemporaryFiles):
         (directory / "www.bilibili.com_cookies.txt").write_text("# Netscape\n", encoding="utf-8")
         (directory / "youtube_cookies.txt").write_text("# Netscape\n", encoding="utf-8")
         (directory / "random.txt").write_text("# Netscape\n", encoding="utf-8")
-        config = self.root / "cookie-dirs.txt"
-        with patch.dict(os.environ, {"BILIBILI_COOKIE_DIRS": str(directory)}, clear=False), \
-                patch.object(cookie_config, "config_path", return_value=config):
+        config = self.root / "config.json"
+        with patch.dict(os.environ, {"BILIBILI_COOKIE_DIRS": str(directory), "BILIBILI_DIGEST_CONFIG": str(config)}, clear=False):
             self.assertEqual([p.name for p in cookie_config.cookie_files()], ["www.bilibili.com_cookies.txt"])
 
     def test_directory_registration_is_persistent(self):
         directory = self.root / "cookies"
         directory.mkdir()
-        config = self.root / "nested" / "cookie-dirs.txt"
-        with patch.object(cookie_config, "config_path", return_value=config):
+        config = self.root / "nested" / "config.json"
+        with patch.dict(os.environ, {"BILIBILI_DIGEST_CONFIG": str(config), "BILIBILI_COOKIE_DIRS": ""}, clear=False):
             self.assertEqual(cookie_config.add_dir(directory), directory.resolve())
             self.assertEqual(cookie_config.configured_dirs(), [directory.resolve()])
         self.assertEqual(config.stat().st_mode & 0o777, 0o600)
 
-    def test_failed_replace_preserves_old_configuration(self):
-        path = self.write("config", "old")
-        with patch.object(common.os, "replace", side_effect=OSError("disk error")):
-            with self.assertRaises(OSError):
-                common.save_config("123:FAKE", "42", path)
-        self.assertEqual(path.read_text(), "old")
-        self.assertEqual(sorted(p.name for p in self.root.iterdir()), ["config"])
+    def test_missing_config_creates_non_secret_template(self):
+        config = self.root / "config.json"
+        with patch.dict(os.environ, {"BILIBILI_DIGEST_CONFIG": str(config)}, clear=False):
+            data, created = user_config.ensure_config()
+        self.assertTrue(created)
+        self.assertEqual(data["cookie_dirs"], [])
+        self.assertEqual(config.stat().st_mode & 0o777, 0o600)
+        self.assertNotIn("TOKEN", config.read_text())
+
+    def test_notes_directory_can_be_changed(self):
+        config = self.root / "config.json"
+        notes = self.root / "notes"
+        with patch.dict(os.environ, {"BILIBILI_DIGEST_CONFIG": str(config)}, clear=False):
+            user_config.ensure_config()
+            self.assertEqual(user_config.set_notes_dir(notes), notes.resolve())
+            self.assertEqual(user_config.load_config()["notes_dir"], str(notes.resolve()))
 
 
 class TelegramTests(unittest.TestCase):
@@ -173,6 +190,14 @@ class SubtitleTests(TemporaryFiles):
 
 
 class FetchTests(TemporaryFiles):
+    def setUp(self):
+        super().setUp()
+        self.config_patch = patch.dict(
+            os.environ, {"BILIBILI_DIGEST_CONFIG": str(self.root / "config.json"), "BILIBILI_COOKIE_DIRS": ""}, clear=False
+        )
+        self.config_patch.start()
+        self.addCleanup(self.config_patch.stop)
+
     def test_parts_expression_supports_ranges_and_discrete_parts(self):
         self.assertEqual(fetch.parse_parts("1~3,7,8,9"), [1, 2, 3, 7, 8, 9])
 
@@ -250,6 +275,23 @@ class FetchTests(TemporaryFiles):
             self.assertEqual(fetch.main(), 0)
         self.assertIn("学习内容", (folder / "transcript.txt").read_text())
         self.assertEqual(json.loads((folder / "manifest.json").read_text())["status"], "transcript-ready")
+
+    def test_configured_notes_directory_is_used_without_output_override(self):
+        notes = self.root / "configured-notes"
+        user_config.set_notes_dir(notes)
+        folder = notes / "BVexample"
+        folder.mkdir(parents=True)
+        (folder / "BVexample.zh-Hans.srt").write_text(
+            "1\n00:00:01,000 --> 00:00:02,000\n配置目录内容\n", encoding="utf-8"
+        )
+        (folder / "BVexample.info.json").write_text('{"title":"metadata"}')
+        fake = subprocess.CompletedProcess([], 0, json.dumps({"id": "BVexample", "title": "课程"}), "")
+        with patch.object(fetch, "yt_dlp_command", return_value="/fake/yt-dlp"), \
+                patch.object(fetch.subprocess, "run", return_value=fake), \
+                patch.object(sys, "argv", ["fetch", "https://www.bilibili.com/video/BVexample"]), \
+                contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(fetch.main(), 0)
+        self.assertIn("配置目录内容", (folder / "transcript.txt").read_text())
 
     def test_downloader_failure_does_not_report_cached_success(self):
         fake = subprocess.CompletedProcess([], 1, '{"id":"BVexample"}', "access denied")
