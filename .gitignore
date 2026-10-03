@@ -5,9 +5,10 @@ __pycache__/
 .venv/
 .env
 *.env
-config.json
-config.local.json
-cookie-dirs.txt
+# Private config lives under ~/.config; only a stray copy in the repo root is ignored here.
+/config.json
+/config.local.json
+/cookie-dirs.txt
 
 # Runtime output and private source material
 bilibili-notes/
