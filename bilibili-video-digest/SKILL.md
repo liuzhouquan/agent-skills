@@ -17,7 +17,7 @@ Run the helper from the skill's own directory (resolve its path; do not assume t
 python3 <skill-dir>/scripts/fetch_bilibili.py "https://www.bilibili.com/video/BV.../?p=1"
 ```
 
-The helper uses the existing user-level yt-dlp runtime, downloads subtitles and metadata, and creates `<notes-dir>/<video-id>/transcript.txt` plus `manifest.json`. The note directory comes from the private user config; the current setup uses `/home/lzq/projects/bilibili-notes`. It reuses cached subtitles on reruns, prefers human Chinese subtitles over Chinese AI subtitles, and excludes danmaku. Read the manifest and the entire transcript before writing `note.md` beside them.
+The helper uses the existing user-level yt-dlp runtime, downloads subtitles and metadata, and creates `<notes-dir>/<video-id>/transcript.txt` plus `manifest.json`. The note directory comes from the private user config and must not be hard-coded into this skill or its public documentation. It reuses cached subtitles on reruns, prefers human Chinese subtitles over Chinese AI subtitles, and excludes danmaku. Read the manifest and the entire transcript before writing `note.md` beside them.
 
 The private config is `~/.config/bilibili-video-digest/config.json`. If it does not exist, the helper creates a template containing no tokens or Cookie values. Set the persistent note directory with:
 
