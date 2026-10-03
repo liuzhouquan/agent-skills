@@ -19,7 +19,7 @@ python3 <skill-dir>/scripts/fetch_bilibili.py "https://www.bilibili.com/video/BV
 
 The helper uses the existing user-level yt-dlp runtime, downloads subtitles and metadata, and creates `<notes-dir>/<video-id>/transcript.txt` plus `manifest.json`. The note directory comes from the private user config and must not be hard-coded into this skill or its public documentation. It reuses cached subtitles on reruns, prefers human Chinese subtitles over Chinese AI subtitles, and excludes danmaku by default. Read the manifest and the entire transcript before writing `note.md` beside them.
 
-Before subtitle probing, the helper checks a local Netscape Cookie file against Bilibili's login-status endpoint when possible. An invalid Cookie is reported as `Cookie 已失效` and returns exit code 6 when subtitles are missing; a valid login with no non-danmaku track is reported as `no-subtitle-track` and keeps exit code 4. If the login state cannot be checked or no Cookie is configured, the helper says so instead of claiming that the video has no subtitles.
+Before subtitle probing, the helper checks a local Netscape Cookie file against Bilibili's login-status endpoint when possible; `#HttpOnly_` prefixed cookie lines are used, as yt-dlp does. An invalid Cookie is reported as `Cookie 登录态无效` and returns exit code 6 when subtitles are missing; a valid login with no non-danmaku track is reported as `no-subtitle-track` and keeps exit code 4. If the login state cannot be checked or no Cookie is configured, the helper says so instead of claiming that the video has no subtitles. The final failure line names the concrete `reason`, so do not restate it as "the video may have no subtitles".
 
 The private config is `~/.config/bilibili-video-digest/config.json`. If it does not exist, the helper creates a template containing no tokens or Cookie values. Set the persistent note directory with:
 
@@ -27,7 +27,7 @@ The private config is `~/.config/bilibili-video-digest/config.json`. If it does 
 python3 <skill-dir>/scripts/configure_cookies.py --set-notes-dir "/absolute/path/to/bilibili-notes"
 ```
 
-Use `--output` for a one-off override. Do not commit the config file to the public skills repository.
+Use `--output` for a one-off override. Do not commit the config file to the public skills repository. When the template is created, the helper also looks for an already existing `bilibili-notes` directory in the current directory and one level below the home directory, and warns when that is not the configured output directory.
 
 Preserve the requested `?p=` part. Before downloading a URL without `?p=`, the helper performs a metadata-only probe. If it detects a multi-part course, it stops and reports the number of parts instead of silently selecting part 1. For a user request such as “第 1～3 集和第 7～9 集”, normalize the parts to `1-3,7-9` and run:
 
@@ -35,7 +35,7 @@ Preserve the requested `?p=` part. Before downloading a URL without `?p=`, the h
 python3 <skill-dir>/scripts/fetch_bilibili.py "https://www.bilibili.com/video/BV..." --parts "1-3,7-9"
 ```
 
-The helper validates the range, processes each selected part separately, and writes each transcript plus `bilibili-notes/<video-id>/combined-transcript.txt` and `series-manifest.json`. Read the combined transcript for a multi-part note, and retain part boundaries and timestamps. For one part, use an explicit URL such as `?p=3`. Accept b23.tv share URLs as well as Bilibili video URLs.
+The helper validates the range, processes each selected part separately, and writes each transcript plus `<notes-dir>/<video-id>/combined-transcript.txt` and `series-manifest.json`. Read the combined transcript for a multi-part note, and retain part boundaries and timestamps. For one part, use an explicit URL such as `?p=3`. Accept b23.tv share URLs as well as Bilibili video URLs.
 
 When no subtitle file is available, `manifest.json` includes `reason`, `auth_status`, and `available_subtitle_tracks`. Typical reasons are `cookie-invalid`, `no-subtitle-track`, `no-cookie-or-login-required`, `cookie-status-unverified`, and `subtitle-download-failed`. Use these fields to decide whether to refresh Cookie or stop retrying the video.
 
@@ -58,7 +58,10 @@ For recurring use, register one or more absolute directories that contain files 
 ```bash
 python3 <skill-dir>/scripts/configure_cookies.py --add-dir "/absolute/path/to/cookies"
 python3 <skill-dir>/scripts/configure_cookies.py --list
+python3 <skill-dir>/scripts/configure_cookies.py --check
 ```
+
+`--list` prints the remembered directories and the Cookie files discovered inside them; `--check` also probes each file's login state (`有效`／`已失效`／`无法确认`) without downloading anything. Use `--check` first when a digest fails, so an expired Cookie is reported before a video is blamed.
 
 The directories are stored in the private `cookie_dirs` field of `~/.config/bilibili-video-digest/config.json`, independent of the skill's installation location. The downloader searches registered directories, `BILIBILI_COOKIE_DIRS`, and an optional repeated `--cookie-dir` argument. Automatic discovery only accepts filenames containing both `bilibili` and `cookie`; pass `--cookies` explicitly for any differently named file. It tries the newest matching export first and can fall back to older registered exports.
 
@@ -90,7 +93,7 @@ python3 <skill-dir>/scripts/setup_telegram.py --reconfigure
 To send a completed note:
 
 ```bash
-python3 <skill-dir>/scripts/send_telegram.py "bilibili-notes/<video-id>/note.md"
+python3 <skill-dir>/scripts/send_telegram.py "<notes-dir>/<video-id>/note.md"
 ```
 
 Use `--dry-run` to check a note without sending. `setup_telegram.py --test` sends one explicit test message and should only be run when the user requests that test. Delivery checks Telegram JSON success, conservatively splits long text with emoji, and stops with a count of confirmed parts on failure. Do not resend a partially delivered note automatically.

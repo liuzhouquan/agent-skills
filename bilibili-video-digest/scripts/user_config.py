@@ -9,8 +9,9 @@ import tempfile
 from pathlib import Path
 
 
+NOTES_DIR_NAME = "bilibili-notes"
 DEFAULT_CONFIG = {
-    "notes_dir": "~/bilibili-notes",
+    "notes_dir": f"~/{NOTES_DIR_NAME}",
     "cookie_dirs": [],
 }
 
@@ -79,3 +80,52 @@ def set_notes_dir(directory: str | Path) -> Path:
     data["notes_dir"] = str(path)
     save_config(data)
     return path
+
+
+def existing_notes_dirs(configured: str | Path, bases: list[Path] | None = None) -> list[Path]:
+    """Return existing note directories that differ from the configured one.
+
+    Each base is searched for `<base>/bilibili-notes` and `<base>/*/bilibili-notes`, so an
+    archive kept next to a project (for example `~/projects/bilibili-notes`) is found
+    without hard-coding that layout.
+    """
+    try:
+        configured_path = Path(configured).expanduser().resolve()
+    except OSError:
+        configured_path = Path(configured).expanduser()
+    if bases is None:
+        bases = [Path.cwd(), Path.home()]
+    candidates = []
+    for base in bases:
+        candidates.append(base / NOTES_DIR_NAME)
+        try:
+            children = sorted(child for child in base.iterdir() if child.is_dir() and not child.name.startswith("."))
+        except OSError:
+            children = []
+        candidates.extend(child / NOTES_DIR_NAME for child in children)
+    found: list[Path] = []
+    seen = {configured_path}
+    for candidate in candidates:
+        try:
+            resolved = candidate.resolve()
+        except OSError:
+            continue
+        if resolved in seen or not resolved.is_dir():
+            continue
+        seen.add(resolved)
+        found.append(resolved)
+    return found
+
+
+def notes_dir_hint(data: dict, bases: list[Path] | None = None) -> str | None:
+    """Explain that other note directories already exist when the template is created."""
+    others = existing_notes_dirs(data.get("notes_dir", DEFAULT_CONFIG["notes_dir"]), bases)
+    if not others:
+        return None
+    lines = ["检测到已有的笔记目录，默认目录可能不是你想继续用的那一个："]
+    lines.extend(f"  - {path}" for path in others)
+    lines.append(
+        '如需改用其中之一：python3 <skill-dir>/scripts/configure_cookies.py '
+        f'--set-notes-dir "{others[0]}"'
+    )
+    return "\n".join(lines)

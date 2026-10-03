@@ -18,7 +18,7 @@ from urllib.parse import parse_qs, parse_qsl, urlencode, urlparse, urlunparse
 
 from cookie_config import cookie_files
 from subtitle_to_text import convert
-from user_config import config_path, ensure_config
+from user_config import config_path, ensure_config, notes_dir_hint
 
 
 EXIT_NO_SUBTITLE = 4
@@ -94,7 +94,11 @@ def cookie_header(path: Path) -> str:
     values = {}
     now = int(time.time())
     for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
-        if not line or line.startswith("#"):
+        # `#HttpOnly_` marks an HttpOnly cookie. yt-dlp strips that prefix and uses the
+        # cookie, so it must not be discarded as a comment.
+        if line.startswith("#HttpOnly_"):
+            line = line[len("#HttpOnly_"):]
+        elif not line or line.startswith("#"):
             continue
         fields = line.split("\t")
         if len(fields) < 7 or "bilibili.com" not in fields[0].lower():
@@ -162,6 +166,19 @@ def subtitle_failure_reason(info: dict, login_status: str) -> str:
     if not non_danmaku:
         return "no-subtitle-track"
     return "subtitle-download-failed"
+
+
+def subtitle_failure_message(video_id: str, reason: str) -> str:
+    """Explain one concrete missing-subtitle reason instead of guessing."""
+    messages = {
+        "cookie-invalid": "Cookie 登录态已失效；请更新 Cookie 后重试。",
+        "cookie-status-unverified": "无法确认 Cookie 登录态（网络或接口异常）；请检查网络后重试。",
+        "no-cookie-or-login-required": "未配置可验证的 B 站 Cookie；无法区分登录限制与视频无字幕。",
+        "no-subtitle-track": "登录态正常，该视频没有可用的字幕轨（只有弹幕）。",
+        "subtitle-download-failed": "存在字幕轨但未下载成功；可重试或检查 yt-dlp。",
+    }
+    detail = messages.get(reason, "原因未知；请重试或检查 yt-dlp 输出。")
+    return f"{video_id} 未获得字幕：{detail}"
 
 
 def selected_part(url: str) -> int | None:
@@ -348,6 +365,9 @@ def main() -> int:
         return 2
     if created:
         print(f"已创建配置模板：{config_path()}")
+        hint = notes_dir_hint(config)
+        if hint:
+            print(hint, file=sys.stderr)
     executable = yt_dlp_command()
     if executable is None:
         print("未找到 yt-dlp。请在隔离 Python 环境安装，或设置 BILIBILI_YT_DLP。", file=sys.stderr)
@@ -422,10 +442,9 @@ def main() -> int:
             print(f"{target}：下载未完成（退出码 {result.returncode}），继续检查已保存的字幕。", file=sys.stderr)
             failed = True
         for info in metadata:
+            reason = subtitle_failure_reason(info, login_status)
             try:
-                manifest, no_subtitle = process_info(
-                    info, target, output, subtitle_failure_reason(info, login_status), login_status
-                )
+                manifest, no_subtitle = process_info(info, target, output, reason, login_status)
             except (OSError, ValueError, TypeError) as error:
                 print(f"字幕解析失败：{error}", file=sys.stderr)
                 failed = True
@@ -437,7 +456,7 @@ def main() -> int:
             )
             records.append(manifest)
             if no_subtitle:
-                print(f"{info['id']} 未获得字幕。可能需要登录 Cookie，或只有画面内字幕。", file=sys.stderr)
+                print(subtitle_failure_message(info["id"], reason), file=sys.stderr)
                 missing = True
             else:
                 print(f"已提取：{info.get('title', info['id'])}\n文字稿：{manifest['transcript']}")

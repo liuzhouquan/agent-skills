@@ -5,9 +5,22 @@ from __future__ import annotations
 
 import argparse
 import sys
+from pathlib import Path
 
-from cookie_config import add_dir, configured_dirs, config_path, remove_dir
+from cookie_config import add_dir, configured_dirs, config_path, cookie_files, remove_dir
+from fetch_bilibili import check_cookie_login
 from user_config import ensure_config, set_notes_dir
+
+LOGIN_LABELS = {
+    "valid": "有效",
+    "invalid": "已失效",
+    "unknown": "无法确认",
+    "not-configured": "未配置",
+}
+
+
+def directory_line(directory: Path) -> str:
+    return f"Cookie 目录：{directory}" + ("" if directory.is_dir() else "（目录不存在）")
 
 
 def main() -> int:
@@ -16,10 +29,11 @@ def main() -> int:
     parser.add_argument("--remove-dir", action="append", metavar="DIR", help="forget a Cookie directory")
     parser.add_argument("--set-notes-dir", metavar="DIR", help="set the persistent note output directory")
     parser.add_argument("--init", action="store_true", help="create the template config if it does not exist")
-    parser.add_argument("--list", action="store_true", help="list remembered and environment directories")
+    parser.add_argument("--list", action="store_true", help="list directories and discovered Cookie files")
+    parser.add_argument("--check", action="store_true", help="probe the login state of each discovered Cookie file")
     args = parser.parse_args()
-    if not args.add_dir and not args.remove_dir and not args.set_notes_dir and not args.init and not args.list:
-        parser.error("choose --add-dir, --remove-dir, --set-notes-dir, --init, or --list")
+    if not any([args.add_dir, args.remove_dir, args.set_notes_dir, args.init, args.list, args.check]):
+        parser.error("choose --add-dir, --remove-dir, --set-notes-dir, --init, --list, or --check")
     try:
         config, created = ensure_config()
         if args.init:
@@ -30,11 +44,24 @@ def main() -> int:
             print(f"已移除 Cookie 目录：{remove_dir(directory)}")
         if args.set_notes_dir:
             print(f"已设置笔记目录：{set_notes_dir(args.set_notes_dir)}")
-        if args.list:
+        if args.list or args.check:
             print(f"配置文件：{config_path()}")
-            print(f"笔记目录：{ensure_config()[0]['notes_dir']}")
-            for directory in configured_dirs():
-                print(directory)
+            print(f"笔记目录：{config['notes_dir']}")
+            directories = configured_dirs()
+            if directories:
+                for directory in directories:
+                    print(directory_line(directory))
+            else:
+                print("Cookie 目录：未配置，可用 --add-dir 记录")
+            files = cookie_files()
+            if not files:
+                print("Cookie 文件：未发现（文件名需同时含 bilibili 和 cookie，后缀 .txt 或 .cookies）")
+            for path in files:
+                if args.check:
+                    state = check_cookie_login(["--cookies", str(path)])
+                    print(f"Cookie 文件：{path}（登录态：{LOGIN_LABELS.get(state, state)}）")
+                else:
+                    print(f"Cookie 文件：{path}")
         return 0
     except (OSError, ValueError) as error:
         print(f"Cookie 目录配置失败：{error}", file=sys.stderr)

@@ -20,6 +20,7 @@ import setup_telegram as setup
 import send_telegram as sender
 import subtitle_to_text as subtitle
 import fetch_bilibili as fetch
+import configure_cookies
 import cookie_config
 import user_config
 
@@ -102,6 +103,72 @@ class CookieConfigTests(TemporaryFiles):
             self.assertEqual(user_config.set_notes_dir(notes), notes.resolve())
             self.assertEqual(user_config.load_config()["notes_dir"], str(notes.resolve()))
 
+    def test_httponly_prefixed_cookie_line_is_used(self):
+        path = self.write(
+            "bilibili.cookies.txt",
+            "# Netscape HTTP Cookie File\n"
+            "#HttpOnly_.bilibili.com\tTRUE\t/\tFALSE\t0\tSESSDATA\tvalue\n",
+        )
+        self.assertIn("SESSDATA=value", fetch.cookie_header(path))
+
+    def test_expired_cookie_line_is_ignored(self):
+        path = self.write(
+            "bilibili.cookies.txt",
+            "# Netscape HTTP Cookie File\n.bilibili.com\tTRUE\t/\tFALSE\t1\tSESSDATA\tstale\n",
+        )
+        self.assertEqual(fetch.cookie_header(path), "")
+
+    def test_existing_notes_directories_are_reported(self):
+        archive = self.root / "projects" / "bilibili-notes"
+        archive.mkdir(parents=True)
+        configured = self.root / "bilibili-notes"
+        found = user_config.existing_notes_dirs(configured, bases=[self.root])
+        self.assertEqual(found, [archive.resolve()])
+        hint = user_config.notes_dir_hint({"notes_dir": str(configured)}, bases=[self.root])
+        self.assertIn(str(archive.resolve()), hint)
+        self.assertIn("--set-notes-dir", hint)
+
+    def test_configured_notes_directory_is_not_reported_as_other(self):
+        configured = self.root / "bilibili-notes"
+        configured.mkdir()
+        self.assertEqual(user_config.existing_notes_dirs(configured, bases=[self.root]), [])
+
+
+class ConfigureTests(TemporaryFiles):
+    def setUp(self):
+        super().setUp()
+        self.directory = self.root / "cookies"
+        self.directory.mkdir()
+        (self.directory / "www.bilibili.com_cookies.txt").write_text(
+            "# Netscape HTTP Cookie File\n.bilibili.com\tTRUE\t/\tFALSE\t0\tSESSDATA\tvalue\n", encoding="utf-8"
+        )
+        self.environment = patch.dict(
+            os.environ,
+            {"BILIBILI_DIGEST_CONFIG": str(self.root / "config.json"), "BILIBILI_COOKIE_DIRS": str(self.directory)},
+            clear=False,
+        )
+        self.environment.start()
+        self.addCleanup(self.environment.stop)
+
+    def run_configure(self, *arguments):
+        with patch.object(sys, "argv", ["configure", *arguments]), contextlib.redirect_stdout(io.StringIO()) as out:
+            code = configure_cookies.main()
+        return code, out.getvalue()
+
+    def test_list_reports_directories_and_cookie_files(self):
+        code, text = self.run_configure("--list")
+        self.assertEqual(code, 0)
+        self.assertIn(str(self.directory), text)
+        self.assertIn("www.bilibili.com_cookies.txt", text)
+
+    def test_check_reports_login_state_without_downloading(self):
+        response = io.BytesIO(b'{"code":-101,"data":{"isLogin":false}}')
+        with patch.object(fetch.urlrequest, "urlopen", return_value=response) as urlopen:
+            code, text = self.run_configure("--check")
+        self.assertEqual(code, 0)
+        self.assertIn("已失效", text)
+        self.assertEqual(urlopen.call_count, 1)
+
 
 class TelegramTests(unittest.TestCase):
     def message(self, update_id, chat_id, text, chat_type="private"):
@@ -116,7 +183,9 @@ class TelegramTests(unittest.TestCase):
         ]
         with patch.object(setup.secrets, "token_urlsafe", return_value="code"), \
                 patch.object(setup, "api_call", side_effect=replies) as api, \
-                contextlib.redirect_stdout(io.StringIO()):
+                contextlib.redirect_stdout(io.StringIO()), \
+                contextlib.redirect_stdout(io.StringIO()), \
+                contextlib.redirect_stderr(io.StringIO()):
             self.assertEqual(setup.discover_chat("123:FAKE", "test_bot", 10)["id"], 444)
         self.assertEqual(api.call_args_list[2].args[2]["offset"], 3)
         self.assertNotIn("allowed_updates", api.call_args_list[1].args[2])
@@ -222,6 +291,12 @@ class FetchTests(TemporaryFiles):
         self.assertEqual(manifest["auth_status"], "valid")
         self.assertEqual(manifest["available_subtitle_tracks"], ["danmaku"])
 
+    def test_failure_message_names_the_concrete_reason(self):
+        self.assertIn("已失效", fetch.subtitle_failure_message("BV1", "cookie-invalid"))
+        self.assertIn("没有可用的字幕轨", fetch.subtitle_failure_message("BV1", "no-subtitle-track"))
+        self.assertIn("未配置", fetch.subtitle_failure_message("BV1", "no-cookie-or-login-required"))
+        self.assertNotIn("可能", fetch.subtitle_failure_message("BV1", "cookie-invalid"))
+
     def test_invalid_cookie_has_distinct_exit_code(self):
         fake = subprocess.CompletedProcess(
             [], 0, json.dumps({"id": "BVbad-cookie", "title": "课程", "subtitles": {"danmaku": [{}]}}), ""
@@ -231,6 +306,7 @@ class FetchTests(TemporaryFiles):
                 patch.object(fetch, "auth_status", return_value="invalid"), \
                 patch.object(fetch.subprocess, "run", return_value=fake), \
                 patch.object(sys, "argv", ["fetch", "https://www.bilibili.com/video/BVbad-cookie", "--output", str(self.root)]), \
+                contextlib.redirect_stdout(io.StringIO()), \
                 contextlib.redirect_stderr(io.StringIO()):
             self.assertEqual(fetch.main(), fetch.EXIT_COOKIE_INVALID)
 
@@ -250,6 +326,7 @@ class FetchTests(TemporaryFiles):
         with patch.object(fetch, "yt_dlp_command", return_value="/fake/yt-dlp"), \
                 patch.object(fetch.subprocess, "run", return_value=fake) as run, \
                 patch.object(sys, "argv", ["fetch", "https://www.bilibili.com/video/BVseries", "--output", str(self.root)]), \
+                contextlib.redirect_stdout(io.StringIO()), \
                 contextlib.redirect_stderr(io.StringIO()):
             self.assertEqual(fetch.main(), 5)
         self.assertEqual(run.call_count, 1)
@@ -273,7 +350,9 @@ class FetchTests(TemporaryFiles):
         with patch.object(fetch, "yt_dlp_command", return_value="/fake/yt-dlp"), \
                 patch.object(fetch.subprocess, "run", side_effect=results) as run, \
                 patch.object(sys, "argv", ["fetch", "https://www.bilibili.com/video/BVseries", "--parts", "1-2,4", "--output", str(self.root)]), \
-                contextlib.redirect_stdout(io.StringIO()):
+                contextlib.redirect_stdout(io.StringIO()), \
+                contextlib.redirect_stdout(io.StringIO()), \
+                contextlib.redirect_stderr(io.StringIO()):
             self.assertEqual(fetch.main(), 0)
         self.assertEqual(run.call_count, 4)
         combined = self.root / "BVseries" / "combined-transcript.txt"
@@ -293,7 +372,9 @@ class FetchTests(TemporaryFiles):
         with patch.object(fetch, "yt_dlp_command", return_value="/fake/yt-dlp"), \
                 patch.object(fetch.subprocess, "run", return_value=fake) as run, \
                 patch.object(sys, "argv", ["fetch", "https://www.bilibili.com/video/BVseries?p=2", "--output", str(self.root)]), \
-                contextlib.redirect_stdout(io.StringIO()):
+                contextlib.redirect_stdout(io.StringIO()), \
+                contextlib.redirect_stdout(io.StringIO()), \
+                contextlib.redirect_stderr(io.StringIO()):
             self.assertEqual(fetch.main(), 0)
         self.assertEqual(run.call_count, 1)
         self.assertIn("第二集", (folder / "transcript.txt").read_text(encoding="utf-8"))
@@ -307,7 +388,9 @@ class FetchTests(TemporaryFiles):
         with patch.object(fetch, "yt_dlp_command", return_value="/fake/yt-dlp"), \
                 patch.object(fetch.subprocess, "run", return_value=fake), \
                 patch.object(sys, "argv", ["fetch", "https://www.bilibili.com/video/BVexample", "--output", str(self.root)]), \
-                contextlib.redirect_stdout(io.StringIO()):
+                contextlib.redirect_stdout(io.StringIO()), \
+                contextlib.redirect_stdout(io.StringIO()), \
+                contextlib.redirect_stderr(io.StringIO()):
             self.assertEqual(fetch.main(), 0)
         self.assertIn("学习内容", (folder / "transcript.txt").read_text())
         self.assertEqual(json.loads((folder / "manifest.json").read_text())["status"], "transcript-ready")
@@ -325,7 +408,9 @@ class FetchTests(TemporaryFiles):
         with patch.object(fetch, "yt_dlp_command", return_value="/fake/yt-dlp"), \
                 patch.object(fetch.subprocess, "run", return_value=fake), \
                 patch.object(sys, "argv", ["fetch", "https://www.bilibili.com/video/BVexample"]), \
-                contextlib.redirect_stdout(io.StringIO()):
+                contextlib.redirect_stdout(io.StringIO()), \
+                contextlib.redirect_stdout(io.StringIO()), \
+                contextlib.redirect_stderr(io.StringIO()):
             self.assertEqual(fetch.main(), 0)
         self.assertIn("配置目录内容", (folder / "transcript.txt").read_text())
 
@@ -334,6 +419,7 @@ class FetchTests(TemporaryFiles):
         with patch.object(fetch, "yt_dlp_command", return_value="/fake/yt-dlp"), \
                 patch.object(fetch.subprocess, "run", return_value=fake), \
                 patch.object(sys, "argv", ["fetch", "https://www.bilibili.com/video/BVexample", "--output", str(self.root)]), \
+                contextlib.redirect_stdout(io.StringIO()), \
                 contextlib.redirect_stderr(io.StringIO()):
             self.assertNotEqual(fetch.main(), 0)
 
