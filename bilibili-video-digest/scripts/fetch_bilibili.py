@@ -10,12 +10,19 @@ import re
 import shutil
 import subprocess
 import sys
+import time
 from pathlib import Path
+from urllib import error as urlerror
+from urllib import request as urlrequest
 from urllib.parse import parse_qs, parse_qsl, urlencode, urlparse, urlunparse
 
 from cookie_config import cookie_files
 from subtitle_to_text import convert
 from user_config import config_path, ensure_config
+
+
+EXIT_NO_SUBTITLE = 4
+EXIT_COOKIE_INVALID = 6
 
 
 def yt_dlp_command() -> str | None:
@@ -30,6 +37,8 @@ def yt_dlp_command() -> str | None:
 
 def subtitle_files(folder: Path) -> list[Path]:
     # Include cached subtitles on reruns; metadata JSON is never a transcript.
+    if not folder.is_dir():
+        return []
     return sorted(
         path for path in folder.iterdir()
         if path.is_file() and path.stat().st_size
@@ -72,6 +81,87 @@ def cookie_options(args: argparse.Namespace, parser: argparse.ArgumentParser) ->
     if not files:
         return [[]]
     return [["--cookies", str(path)] for path in files] + [[]]
+
+
+def cookie_file(options: list[str]) -> Path | None:
+    try:
+        return Path(options[options.index("--cookies") + 1])
+    except (ValueError, IndexError):
+        return None
+
+
+def cookie_header(path: Path) -> str:
+    values = {}
+    now = int(time.time())
+    for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
+        if not line or line.startswith("#"):
+            continue
+        fields = line.split("\t")
+        if len(fields) < 7 or "bilibili.com" not in fields[0].lower():
+            continue
+        if fields[4].isdigit() and int(fields[4]) not in {0} and int(fields[4]) <= now:
+            continue
+        values[fields[5]] = fields[6]
+    return "; ".join(f"{name}={value}" for name, value in values.items())
+
+
+def check_cookie_login(options: list[str]) -> str:
+    """Return valid, invalid, unknown, or not-configured without exposing Cookie values."""
+    path = cookie_file(options)
+    if path is None:
+        return "unknown" if "--cookies-from-browser" in options else "not-configured"
+    try:
+        header = cookie_header(path)
+        if not header:
+            return "invalid"
+        request = urlrequest.Request(
+            "https://api.bilibili.com/x/web-interface/nav",
+            headers={"Cookie": header, "User-Agent": "Mozilla/5.0"},
+        )
+        with urlrequest.urlopen(request, timeout=20) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+    except (OSError, UnicodeError, ValueError, urlerror.URLError, urlerror.HTTPError, TimeoutError):
+        return "unknown"
+    data = payload.get("data") if isinstance(payload, dict) else None
+    if isinstance(data, dict) and data.get("isLogin") is True and payload.get("code") == 0:
+        return "valid"
+    if payload.get("code") == -101 or (isinstance(data, dict) and data.get("isLogin") is False):
+        return "invalid"
+    return "unknown"
+
+
+def auth_status(options: list[list[str]]) -> str:
+    states = [check_cookie_login(item) for item in options]
+    if "valid" in states:
+        return "valid"
+    if "invalid" in states:
+        return "invalid"
+    if "unknown" in states:
+        return "unknown"
+    return "not-configured"
+
+
+def available_subtitle_tracks(info: dict) -> set[str]:
+    tracks = set()
+    for key in ("subtitles", "automatic_captions"):
+        values = info.get(key)
+        if isinstance(values, dict):
+            tracks.update(str(name) for name in values)
+    return tracks
+
+
+def subtitle_failure_reason(info: dict, login_status: str) -> str:
+    tracks = available_subtitle_tracks(info)
+    non_danmaku = {name for name in tracks if name.lower() != "danmaku"}
+    if login_status == "invalid":
+        return "cookie-invalid"
+    if login_status == "unknown":
+        return "cookie-status-unverified"
+    if login_status == "not-configured":
+        return "no-cookie-or-login-required"
+    if not non_danmaku:
+        return "no-subtitle-track"
+    return "subtitle-download-failed"
 
 
 def selected_part(url: str) -> int | None:
@@ -167,7 +257,9 @@ def run_with_cookie_options(
     return last_result, last_metadata, attempts
 
 
-def process_info(info: dict, source_url: str, output: Path) -> tuple[dict, bool]:
+def process_info(
+    info: dict, source_url: str, output: Path, failure_reason: str | None = None, login_status: str | None = None
+) -> tuple[dict, bool]:
     video_id = info["id"]
     if not safe_video_id(video_id):
         raise ValueError("视频 ID 格式错误。")
@@ -182,6 +274,9 @@ def process_info(info: dict, source_url: str, output: Path) -> tuple[dict, bool]
     }
     if not paths:
         manifest["status"] = "no-accessible-subtitle"
+        manifest["reason"] = failure_reason or subtitle_failure_reason(info, login_status or "unknown")
+        manifest["auth_status"] = login_status or "unknown"
+        manifest["available_subtitle_tracks"] = sorted(available_subtitle_tracks(info))
         return manifest, True
     selected = preferred_subtitle(paths)
     transcript = folder / "transcript.txt"
@@ -260,6 +355,13 @@ def main() -> int:
     notes_dir = args.output or Path(os.environ.get("BILIBILI_NOTES_DIR", config["notes_dir"])).expanduser()
     output = notes_dir.resolve()
     cookie_sets = cookie_options(args, parser)
+    login_status = auth_status(cookie_sets)
+    if login_status == "invalid":
+        print("Cookie 已失效：B 站登录态检查失败。请更新 Cookie 后重试。", file=sys.stderr)
+    elif login_status == "unknown":
+        print("无法确认 Cookie 登录态；如果没有字幕，请先检查网络或更新 Cookie。", file=sys.stderr)
+    elif login_status == "not-configured":
+        print("未配置可验证的 B 站 Cookie；字幕缺失时无法区分登录限制和视频无字幕。", file=sys.stderr)
     if explicit_part is not None:
         targets = [(explicit_part, args.url)]
     else:
@@ -321,7 +423,9 @@ def main() -> int:
             failed = True
         for info in metadata:
             try:
-                manifest, no_subtitle = process_info(info, target, output)
+                manifest, no_subtitle = process_info(
+                    info, target, output, subtitle_failure_reason(info, login_status), login_status
+                )
             except (OSError, ValueError, TypeError) as error:
                 print(f"字幕解析失败：{error}", file=sys.stderr)
                 failed = True
@@ -343,8 +447,10 @@ def main() -> int:
         print(f"合并文字稿：{combined}")
     if not records:
         return 3
+    if login_status == "invalid" and missing:
+        return EXIT_COOKIE_INVALID
     if failed or missing:
-        return 4
+        return EXIT_NO_SUBTITLE
     return 0
 
 

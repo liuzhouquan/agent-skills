@@ -198,6 +198,42 @@ class FetchTests(TemporaryFiles):
         self.config_patch.start()
         self.addCleanup(self.config_patch.stop)
 
+    def test_cookie_login_probe_distinguishes_valid_and_invalid(self):
+        cookie = self.write(
+            "bilibili.cookies.txt",
+            "# Netscape HTTP Cookie File\n.bilibili.com\tTRUE\t/\tFALSE\t0\tSESSDATA\tvalue\n",
+        )
+        valid = io.BytesIO(b'{"code":0,"data":{"isLogin":true}}')
+        invalid = io.BytesIO(b'{"code":-101,"data":{"isLogin":false}}')
+        with patch.object(fetch.urlrequest, "urlopen", return_value=valid):
+            self.assertEqual(fetch.check_cookie_login(["--cookies", str(cookie)]), "valid")
+        with patch.object(fetch.urlrequest, "urlopen", return_value=invalid):
+            self.assertEqual(fetch.check_cookie_login(["--cookies", str(cookie)]), "invalid")
+
+    def test_no_subtitle_manifest_records_reason_and_tracks(self):
+        info = {"id": "BVno-track", "title": "课程", "subtitles": {"danmaku": [{"ext": "xml"}]}}
+        manifest, missing = fetch.process_info(
+            info, "https://www.bilibili.com/video/BVno-track", self.root,
+            "no-subtitle-track", "valid",
+        )
+        self.assertTrue(missing)
+        self.assertEqual(manifest["status"], "no-accessible-subtitle")
+        self.assertEqual(manifest["reason"], "no-subtitle-track")
+        self.assertEqual(manifest["auth_status"], "valid")
+        self.assertEqual(manifest["available_subtitle_tracks"], ["danmaku"])
+
+    def test_invalid_cookie_has_distinct_exit_code(self):
+        fake = subprocess.CompletedProcess(
+            [], 0, json.dumps({"id": "BVbad-cookie", "title": "课程", "subtitles": {"danmaku": [{}]}}), ""
+        )
+        with patch.object(fetch, "yt_dlp_command", return_value="/fake/yt-dlp"), \
+                patch.object(fetch, "cookie_options", return_value=[["--cookies", "/tmp/fake.cookies"]]), \
+                patch.object(fetch, "auth_status", return_value="invalid"), \
+                patch.object(fetch.subprocess, "run", return_value=fake), \
+                patch.object(sys, "argv", ["fetch", "https://www.bilibili.com/video/BVbad-cookie", "--output", str(self.root)]), \
+                contextlib.redirect_stderr(io.StringIO()):
+            self.assertEqual(fetch.main(), fetch.EXIT_COOKIE_INVALID)
+
     def test_parts_expression_supports_ranges_and_discrete_parts(self):
         self.assertEqual(fetch.parse_parts("1~3,7,8,9"), [1, 2, 3, 7, 8, 9])
 
