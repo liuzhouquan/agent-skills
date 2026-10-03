@@ -357,7 +357,7 @@ def main() -> int:
     cookie_sets = cookie_options(args, parser)
     login_status = auth_status(cookie_sets)
     if login_status == "invalid":
-        print("Cookie 已失效：B 站登录态检查失败。请更新 Cookie 后重试。", file=sys.stderr)
+        print("Cookie 登录态无效：将继续尝试公开字幕；如果字幕缺失，请更新 Cookie。", file=sys.stderr)
     elif login_status == "unknown":
         print("无法确认 Cookie 登录态；如果没有字幕，请先检查网络或更新 Cookie。", file=sys.stderr)
     elif login_status == "not-configured":
