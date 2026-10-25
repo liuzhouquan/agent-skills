@@ -1,6 +1,6 @@
 ---
 name: source-code-learning
-description: Learn selected technical mechanisms in a codebase through source evidence, focused practice, and persistent progress. Use when a user wants to understand how a project implements a specific behavior, trace a code path, reproduce or modify a mechanism, or resume a prior code-learning session.
+description: Learn selected technical mechanisms in a codebase through source evidence, focused practice, and persistent progress. Use for a focused codebase study, implementation trace, reproduction or modification exercise, or resuming a prior code-learning track.
 ---
 
 # Source Code Learning
@@ -15,10 +15,11 @@ Before mapping or reading broadly, identify the mechanism or question the learne
 - If it is broad, propose a small set of mechanisms grounded in the repository and ask the learner to choose; a short initial reconnaissance is enough to make useful options.
 - If the user already named a capability (for example, “be able to modify and reproduce it”), use that as the target mastery level.
 - Explicitly define what is in scope, what is deferred, and observable completion evidence. Do not treat reading the whole project as a goal.
+- For a one-off implementation question, answer directly with evidence. Start a persistent learning track when the user asks for systematic study, a plan, progress tracking, or saved notes.
 
 ## Source and evidence
 
-Use the checked-out code and reproducible observations as primary evidence. Record the repository path, remote when available, branch, and commit so later sessions can detect source drift.
+Use local source files and reproducible observations as primary evidence. Record the source path and, for Git repositories, the remote without credentials, branch, and commit so later sessions can detect drift. For a directory without Git metadata, record its source/version when known and content hashes of the studied files whose changes would require rechecking a conclusion.
 
 For explanations about implementation, cite the most precise available source evidence:
 
@@ -35,7 +36,7 @@ Track a level per learning objective; do not award a level from exposure or read
 
 1. **Knows its purpose** — can state the problem the mechanism solves, when it is used, and its main inputs and outputs.
 2. **Can explain the implementation** — can reconstruct the important source path and explain key decisions, state changes, and relevant edge cases, with source evidence.
-3. **Can modify and reproduce it** — can make or direct a meaningful change, run a focused experiment or test, and explain the resulting behavior and how to reproduce it.
+3. **Can modify and reproduce it** — the learner has implemented or independently repeated a meaningful change or isolated modification exercise, reproduced the resulting behavior with a focused command or test, and can explain the result and reproduction steps. An unrun patch or suggestion is insufficient.
 
 The learner may target a lower level when that is sufficient. Record achieved level, evidence, and remaining gap separately; advancement requires a learner explanation or artifact plus supporting source or runtime evidence.
 
@@ -43,9 +44,9 @@ The learner may target a lower level when that is sufficient. Record achieved le
 
 ### 1. Establish the workspace and scope
 
-Use the user's local repository or clone only the source they selected. Capture the current source identity. Check the top-level documentation, build/run instructions, dependency manifests, and test layout as needed to answer the selected goal. Verify tools and services before proposing a practice step.
+Use the user's local source directory or clone only the repository they selected. Capture the current source identity. Check the top-level documentation, build/run instructions, dependency manifests, and test layout as needed to answer the selected goal. Verify tools and services before proposing a practice step.
 
-Create or find a persistent learning workspace separate from generated build output. Prefer a user-designated notes location. Otherwise use a clearly named `learning/source-code-learning/` directory beside the checkout, or a location the user chooses. Avoid placing personal notes in a third-party repository unless the user prefers that. Record the path in the project overview. Use the templates in [references/artifact-templates.md](references/artifact-templates.md).
+For an ongoing track, create or find a learning workspace separate from generated build output. Prefer the user's notes location; otherwise use `~/source-code-learning/<track-name>/`. Keep `~/source-code-learning/index.md` as the locator even when the user chooses another notes location. Give each track stable filenames: `overview.md`, `plan.md`, and `state.md`. Record the canonical source path and the state-file path in the index. If two sources share a name, choose distinct track names. Avoid placing personal notes in a third-party repository unless the user prefers that. Use the templates in [references/artifact-templates.md](references/artifact-templates.md).
 
 ### 2. Make focused maps
 
@@ -74,13 +75,13 @@ Answer the question directly, then show the smallest useful source-backed trace:
 
 At a unit review, ask the learner to explain or predict the mechanism, then compare the explanation to code and experiment evidence. Update the level and gap. Identify **transfer value**: which design, abstraction, or technique could help the learner's own project, the conditions under which it applies, and adaptations or tradeoffs needed. Do not recommend copying an implementation without checking its dependencies, license, assumptions, and context.
 
-Persist progress at the start and end of a meaningful work session, after completing or changing a unit, after answering a deep-dive question that changes understanding, and when source identity changes. Update the existing state rather than creating a new status file each turn. Before resuming, read the recorded state and verify the repository path and commit. If the checkout has moved, preserve prior evidence but re-check claims tied to changed code. If no state exists, ask whether the learner wants to begin a new track or locate another notes workspace.
+For an ongoing track, persist progress after establishing the goal, after completing or changing a unit, after a deep-dive changes understanding, and before ending a meaningful session. Update the existing `state.md` rather than creating a new status file each turn. To resume, read `~/source-code-learning/index.md`, select the track by source path or user description, then read its `state.md` and verify the source path and revision. If studied files have changed, preserve prior evidence but re-check claims tied to them. If the index or matching state is missing, inspect a user-provided notes location or ask for the source directory and start a new track. Do not silently reconstruct past progress.
 
 Keep high-value explanations, evidence, experiments, mastery, transfer notes, and unresolved questions. Do not create a note for every conversational turn. Distinguish verified results from hypotheses in persistent artifacts.
 
 ## Progress and completion
 
-Use explicit statuses: `pending`, `in_progress`, `completed`, and `needs_review`. Keep an interrupted unit's position and next action so another session can resume without repeating completed work. After each substantial turn, state the current objective, achieved mastery, evidence captured, and the next action.
+Use explicit statuses: `pending`, `in_progress`, `completed`, and `needs_review`. Keep an interrupted unit's position and next action so another session can resume without repeating completed work. In an ongoing track, briefly state the current objective, achieved mastery, evidence captured, and next action after substantial progress; do not force a progress report onto a one-off answer.
 
 An objective is complete when its stated target level has evidence and the learner has addressed important gaps. A whole learning track may remain open for optional mechanisms; do not require project-wide coverage. At track review, summarize:
 

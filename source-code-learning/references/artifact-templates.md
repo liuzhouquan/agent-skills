@@ -1,6 +1,18 @@
 # Learning Artifacts
 
-Create only the files that help the learner's chosen scope. Keep notes outside the source checkout by default; record their location so a new session can find them. Update the same state file as learning progresses.
+Create only the files that help the learner's chosen scope. For an ongoing track, keep notes outside the source checkout by default. Use `~/source-code-learning/index.md` to locate tracks and keep one `state.md` per track; update it as learning progresses.
+
+## Track index (`~/source-code-learning/index.md`)
+
+```markdown
+# Source Code Learning Tracks
+
+| Track | Source path | State file | Current goal | Updated |
+| --- | --- | --- | --- | --- |
+| <name> | <canonical path> | <absolute path>/state.md | <mechanism> | <date> |
+```
+
+Add or update one row per track. Use distinct names when source directories have the same basename. Avoid putting credentials or private source excerpts in the index.
 
 ## Project overview
 
@@ -13,10 +25,11 @@ Create only the files that help the learner's chosen scope. Keep notes outside t
 - Why this matters:
 
 ## Source identity
-- Repository path:
+- Source path:
 - Remote:
 - Branch:
 - Commit:
+- Other revision / studied file content hashes (when no Git metadata):
 - Runtime/tooling:
 
 ## Knowledge map
@@ -34,6 +47,7 @@ Create only the files that help the learner's chosen scope. Keep notes outside t
 ## Completion evidence
 
 ## Current status and next action
+- State file:
 
 ## Open questions
 
@@ -66,8 +80,11 @@ Keep only one unit `in_progress`. Do not mark a unit complete without evidence f
 
 ## Identity
 - Workspace / overview path:
-- Repository path:
-- Remote, branch, commit:
+- Source path:
+- Remote:
+- Branch:
+- Commit:
+- Other revision / studied file content hashes (when no Git metadata):
 - Last verified:
 
 ## Current goal
@@ -81,6 +98,7 @@ Keep only one unit `in_progress`. Do not mark a unit complete without evidence f
 - Learner explanation or artifact:
 - Source paths, symbols, call chain:
 - Experiment / command and result:
+- Reproduction steps (required for level 3):
 - Remaining gap:
 
 ## Decisions and changes

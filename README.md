@@ -24,12 +24,19 @@
 git clone https://github.com/liuzhouquan/agent-skills.git
 cp -a agent-skills/bilibili-video-digest ~/.codex/skills/
 cp -a agent-skills/youtube-video-digest ~/.codex/skills/
+cp -a agent-skills/source-code-learning ~/.codex/skills/
 ```
 
 使用时直接告诉 Codex：
 
 ```text
 使用 youtube-video-digest 总结这个视频并发到 Telegram：<YouTube URL>
+```
+
+源码学习示例：
+
+```text
+使用 source-code-learning 学习这个仓库的请求重试机制，目标是能解释实现和调用链。
 ```
 
 Telegram 配置默认读取 `~/.config/bilibili-video-digest/telegram.env`，两个 skill 可以共用同一个 Bot 和目标聊天。

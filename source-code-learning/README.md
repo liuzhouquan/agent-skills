@@ -22,7 +22,7 @@
 
 1. **知道用途**：能说明机制解决的问题、使用场景和输入输出。
 2. **能解释实现**：能根据源码复述关键路径、状态变化、设计选择和边界。
-3. **能修改和复现**：能提出或完成有意义的改动，并通过实验或测试解释和复现结果。
+3. **能修改和复现**：学习者亲自完成或独立重复有意义的改动或隔离练习，运行针对性实验或测试，并能说明结果和复现步骤。未运行的建议不算完成。
 
 每个目标单独记录掌握等级和证据；不以读过代码作为掌握证明。
 
@@ -43,4 +43,4 @@
 
 ## 持久化
 
-默认将学习资料放在源码 checkout 外的 `learning/source-code-learning/`，也可由用户指定位置。概览、计划、会话状态和记录模板见 [`references/artifact-templates.md`](references/artifact-templates.md)。新会话先读状态文件并核对仓库 commit；代码版本变化后重新验证受影响的结论。
+持续学习时，默认把资料放在 `~/source-code-learning/<track-name>/`；也可由用户指定位置。`~/source-code-learning/index.md` 记录源码目录与 `state.md` 的对应关系，供新会话定位。概览、计划、会话状态和索引模板见 [`references/artifact-templates.md`](references/artifact-templates.md)。恢复时核对源码版本；代码变化后重新验证受影响的结论。一次性源码问答不会自动创建学习文件。
