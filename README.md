@@ -1,8 +1,12 @@
 # Agent Skills
 
-公开维护的 Codex skills，当前包含视频字幕提取、中文笔记整理和 Telegram 推送工具。
+公开维护的 Agent skills，包含视频学习、源码学习、中文笔记整理和 Telegram 推送工具。
 
 ## Skills
+
+### `source-code-learning`
+
+围绕用户指定的技术机制学习代码库：先明确目标和掌握层级，再建立聚焦的知识地图与代码地图，通过源码路径、符号、调用链和实验结果解释实现，并持久化学习状态以便新会话恢复。学习结论还会标出可迁移到用户项目的做法及适用条件。
 
 ### `bilibili-video-digest`
 

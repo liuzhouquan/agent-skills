@@ -1,0 +1,4 @@
+interface:
+  display_name: "Source Code Learning"
+  short_description: "围绕目标机制追踪源码、验证实现并持续记录学习进度"
+  default_prompt: "Use $source-code-learning to understand a specific mechanism in this codebase, trace its source evidence, and record my progress."
