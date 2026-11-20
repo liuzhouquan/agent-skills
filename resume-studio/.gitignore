@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+
+# Personal resume data must stay out of the skill repository.
+/studio.sqlite3*
+/resume.json
+/presentation.json
+/workspace/
+/data/
+/history/
+/exports/

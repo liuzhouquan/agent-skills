@@ -1,0 +1,4 @@
+interface:
+  display_name: "Resume Studio"
+  short_description: "Edit structured resumes with live templates and local Codex chat"
+  default_prompt: "Use $resume-studio to open a local editor and help me write a resume with independent content and templates."
