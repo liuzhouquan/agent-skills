@@ -15,6 +15,7 @@ import mimetypes
 import re
 import queue
 import os
+import platform
 from storage import Library, Conflict
 
 ASSETS = Path(__file__).resolve().parents[1] / 'assets' / 'studio'
@@ -166,6 +167,8 @@ def main():
     effective_model=a.model or agent_info['default'] or None
     agent_info['selected']=effective_model or ''
     agent_info['status']='待验证'
+    release=platform.release().lower()
+    agent_info['runtime']='WSL2' if os.environ.get('WSL_DISTRO_NAME') or 'microsoft' in release else platform.system()
     token=secrets.token_urlsafe(32); lock=threading.Lock(); agent_lock=threading.Lock()
     class Handler(BaseHTTPRequestHandler):
         def reply(self,status,data,kind='application/json'):

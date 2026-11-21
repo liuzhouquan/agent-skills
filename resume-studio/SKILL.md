@@ -37,7 +37,7 @@ Read [references/data-contract.md](references/data-contract.md) before importing
 
 Paste existing text or Markdown into “粘贴内容，让 Agent 整理”; choose replace to create a new resume from those facts only, or merge to enrich the current document. Both return a reviewable candidate without overwriting the current resume.
 
-The editor offers plain text forms, live preview, section/item management, JSON import/export, local save, standalone HTML export, and browser print. A print preview is not proof of correct PDF pagination: inspect resulting PDF if a PDF deliverable is requested.
+The editor offers plain text forms and optional in-preview editing for profile, section and item text; changes update structured content and autosave. Candidate previews remain read-only. It offers live preview, section/item management, JSON import/export, local save, standalone HTML export, and browser print. A print preview is not proof of correct PDF pagination: inspect resulting PDF if a PDF deliverable is requested.
 
 ## Agent interaction
 

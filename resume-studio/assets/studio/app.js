@@ -1,12 +1,50 @@
 const $=id=>document.getElementById(id);
 let resume,presentation,manifest,styles={},token,dirty=false,candidate=null,base='',comparing=false,history=[];
+let inlineEditing=false;
 let currentDoc=null,autosaveTimer=null,saveQueue=Promise.resolve(),persistedSnapshot='',archivePreview=null,agentRunning=false,libraryChanging=false,activeVersionId='';
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 async function api(path,data){const r=await fetch(path,{method:data===undefined?'GET':'POST',headers:{'Content-Type':'application/json','X-Studio-Token':token||''},body:data===undefined?undefined:JSON.stringify(data)});const b=await r.json();if(!r.ok)throw Error(b.error||r.statusText);return b;}
 function status(s){$('status').textContent=s;}
 function changed(){dirty=true;comparing=false;archivePreview=null;render();status('正在等待自动保存…');remember();}
-function documentHTML(data){return `<!doctype html><html lang="zh-CN"><meta charset="utf-8"><title>${esc(data.profile.name)} · 简历</title><style>${styles.base}\n${styles[presentation.template]}</style><body class="${presentation.density}"><article class="resume"><header class="profile"><h1>${esc(data.profile.name)}</h1><div class="headline">${esc(data.profile.headline)}</div><div class="contact">${esc(data.profile.contact)}</div></header>${data.profile.summary?`<p class="summary">${esc(data.profile.summary)}</p>`:''}${data.sections.map(s=>`<section class="section"><h2>${esc(s.title)}</h2>${s.items.filter(i=>!i.hidden).map(i=>`<div class="item"><div class="item-head"><h3>${esc(i.title)}</h3><span class="period">${esc(i.period)}</span></div><div class="subtitle">${esc(i.subtitle)}</div>${i.bullets.length?`<ul>${i.bullets.map(b=>`<li>${esc(b)}</li>`).join('')}</ul>`:''}</div>`).join('')}</section>`).join('')}</article></body></html>`;}
-function render(){if(!resume)return;const split=$('comparison').hidden===false;if(split){$('current-preview').srcdoc=documentHTML(resume);$('candidate-preview').srcdoc=documentHTML(candidate||resume);}else $('preview').srcdoc=documentHTML(archivePreview|| (comparing&&candidate?candidate:resume));}
+function documentHTML(data){
+ const profile=data.profile;
+ const sections=data.sections.map((section,si)=>`<section class="section"><h2 data-path="sections.${si}.title">${esc(section.title)}</h2>${section.items.map((item,ii)=>item.hidden?'':`<div class="item"><div class="item-head"><h3 data-path="sections.${si}.items.${ii}.title">${esc(item.title)}</h3><span class="period" data-path="sections.${si}.items.${ii}.period">${esc(item.period)}</span></div><div class="subtitle" data-path="sections.${si}.items.${ii}.subtitle">${esc(item.subtitle)}</div>${item.bullets.length?`<ul>${item.bullets.map((bullet,bi)=>`<li data-path="sections.${si}.items.${ii}.bullets.${bi}">${esc(bullet)}</li>`).join('')}</ul>`:''}</div>`).join('')}</section>`).join('');
+ return `<!doctype html><html lang="zh-CN"><meta charset="utf-8"><title>${esc(profile.name)} · 简历</title><style>${styles.base}\n${styles[presentation.template]}\n.inline-edit [contenteditable=\"true\"]{outline:1px dashed #4d89ad;outline-offset:2px;cursor:text}.inline-edit [contenteditable=\"true\"]:focus{outline:2px solid #2879a7;background:#f1f8fc}</style><body class="${presentation.density}"><article class="resume"><header class="profile"><h1 data-path="profile.name">${esc(profile.name)}</h1><div class="headline" data-path="profile.headline">${esc(profile.headline)}</div><div class="contact" data-path="profile.contact">${esc(profile.contact)}</div></header>${profile.summary?`<p class="summary" data-path="profile.summary">${esc(profile.summary)}</p>`:''}${sections}</article></body></html>`;
+}
+function applyInlineEditing(){
+ const frame=$('preview'),enabled=inlineEditing&&!comparing&&!archivePreview&&$('comparison').hidden;
+ $('inline-edit').disabled=comparing||!!archivePreview||!$('comparison').hidden;
+ $('inline-edit').setAttribute('aria-pressed',String(enabled));
+ $('inline-edit').textContent=enabled?'完成直接编辑':'直接编辑简历';
+ try{
+  const doc=frame.contentDocument;if(!doc)return;
+  doc.body.classList.toggle('inline-edit',enabled);
+  for(const el of doc.querySelectorAll('[data-path]')){
+   el.contentEditable=String(enabled);el.spellcheck=enabled;
+   if(!enabled)continue;
+   el.onblur=()=>{
+    const keys=el.dataset.path.split('.');let target=resume;
+    for(const key of keys.slice(0,-1))target=target[(/^\d+$/.test(key)?Number(key):key)];
+    const last=keys.at(-1);target[/^\d+$/.test(last)?Number(last):last]=el.innerText.replace(/\n+$/,'');
+    changed();
+   };
+  }
+ }catch{}
+}
+
+function render(){
+ if(!resume)return;
+ const split=$('comparison').hidden===false;
+ if(split){$('current-preview').srcdoc=documentHTML(resume);$('candidate-preview').srcdoc=documentHTML(candidate||resume);}
+ else{
+  const frame=$('preview');frame.onload=()=>applyInlineEditing();
+  frame.srcdoc=documentHTML(archivePreview||(comparing&&candidate?candidate:resume));
+  applyInlineEditing();
+ }
+ applyInlineEditing();
+}
+$('inline-edit').onclick=()=>{if(comparing||archivePreview||!$('comparison').hidden)return;inlineEditing=!inlineEditing;applyInlineEditing();status(inlineEditing?'直接编辑已开启：点击文字进行修改':'直接编辑已完成');};
+
 function button(parent,text,fn){const el=document.createElement('button');el.textContent=text;el.onclick=fn;parent.append(el);return el;}
 function field(parent,label,value,set,multi=false){const l=document.createElement('label');l.textContent=label;const el=document.createElement(multi?'textarea':'input');el.value=value;if(multi)el.rows=3;el.oninput=()=>{set(el.value);changed();};l.append(el);parent.append(l);}
 function fields(){const p=$('fields');p.replaceChildren();for(const [k,l]of Object.entries({name:'姓名',headline:'求职方向',contact:'联系方式',summary:'个人简介'}))field(p,l,resume.profile[k],v=>resume.profile[k]=v,k==='summary');resume.sections.forEach((s,si)=>{const box=document.createElement('div');box.className='edit-section';p.append(box);field(box,'章节标题',s.title,v=>s.title=v);button(box,'上移',()=>{if(si){[resume.sections[si-1],resume.sections[si]]=[s,resume.sections[si-1]];fields();changed();}});button(box,'删除章节',()=>{if(confirm('删除这个章节？')){resume.sections.splice(si,1);fields();changed();}});s.items.forEach((i,ii)=>{const row=document.createElement('div');row.className='edit-item';box.append(row);for(const[k,l]of Object.entries({title:'名称',subtitle:'职位 / 技术栈',period:'时间'}))field(row,l,i[k],v=>i[k]=v);field(row,'要点（每行一条）',i.bullets.join('\n'),v=>i.bullets=v.split('\n').filter(Boolean),true);const hide=button(row,i.hidden?'恢复显示':'在简历中隐藏',()=>{i.hidden=!i.hidden;fields();changed();});hide.setAttribute('aria-pressed',String(!!i.hidden));if(i.hidden){const note=document.createElement('span');note.className='hidden-note';note.textContent='隐藏 · 不显示在预览，也不会发给 Codex';row.append(note);}button(row,'删除条目',()=>{s.items.splice(ii,1);fields();changed();});});button(box,'添加条目',()=>{s.items.push({title:'',subtitle:'',period:'',bullets:[],hidden:false});fields();changed();});});}
@@ -100,7 +138,7 @@ window.addEventListener('beforeunload',e=>{if(dirty){e.preventDefault();e.return
  select.dataset.default=b.agent.default||b.agent.selected||'';
  const savedModel=b.document.state.memory?.model;
  select.value=b.agent.models.some(m=>m.id===savedModel)?savedModel:select.dataset.default;
- if(savedModel&&!b.agent.models.some(m=>m.id===savedModel))$('model-note').textContent='草稿保存的模型 '+savedModel+' 不在本机 CLI 可用列表中，已切换到 '+(b.agent.models.find(m=>m.id===select.value)?.name||'CLI 推荐模型')+'。当前对话模型与 CLI 模型分别配置。';
+ $('model-note').textContent='运行环境：'+(b.agent.runtime||'本机')+'。列表来自该环境的 Codex CLI；当前选择可从此简历恢复，和 ChatGPT 对话模型分开。';if(savedModel&&!b.agent.models.some(m=>m.id===savedModel))$('model-note').textContent='草稿保存的模型 '+savedModel+' 不在 '+(b.agent.runtime||'本机')+' CLI 列表中，已切换到 '+(b.agent.models.find(m=>m.id===select.value)?.name||'CLI 推荐模型')+'。当前对话模型与 CLI 模型分别配置。';
  connection(b.agent.status+' · '+(select.value||'无可用模型')+(b.agent.error?' · '+b.agent.error:''));
  for(const t of manifest){const o=document.createElement('option');o.value=t.id;o.textContent=t.name;$('template').append(o);styles[t.id]=await(await fetch('/templates/'+t.file)).text();}
  styles.base=await(await fetch('/templates/base.css')).text();$('storage-location').textContent='本地私有目录：'+b.workspace;
