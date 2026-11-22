@@ -4,6 +4,10 @@
 
 ## Skills
 
+### `study-studio`
+
+围绕多个源码仓库、PDF、Markdown 和文本资料持续提问与学习。在指定目录或主要资料同级的 `<名称>-studyspace/` 中维护 `goal.md`、`note/` 和 `assets.json`，自动将已讲清的问题整理成带来源的可复用结论，记录学习目标、背景和下一步。资源可以保留原位置，无需部署索引服务。
+
 ### `source-code-learning`
 
 围绕用户指定的技术机制学习代码库：先明确目标和掌握层级，再建立聚焦的知识地图与代码地图，通过源码路径、符号、调用链和实验结果解释实现，并持久化学习状态以便新会话恢复。学习结论还会标出可迁移到用户项目的做法及适用条件。
@@ -25,12 +29,20 @@ git clone https://github.com/liuzhouquan/agent-skills.git
 cp -a agent-skills/bilibili-video-digest ~/.codex/skills/
 cp -a agent-skills/youtube-video-digest ~/.codex/skills/
 cp -a agent-skills/source-code-learning ~/.codex/skills/
+cp -a agent-skills/study-studio ~/.codex/skills/
 ```
 
 使用时直接告诉 Codex：
 
 ```text
 使用 youtube-video-digest 总结这个视频并发到 Telegram：<YouTube URL>
+```
+
+综合学习示例：
+
+```text
+使用 study-studio，结合 /work/service、/docs/retry.pdf 学习请求重试设计。
+把目标和整理后的问答保存在 /notes/retry-studyspace。
 ```
 
 源码学习示例：

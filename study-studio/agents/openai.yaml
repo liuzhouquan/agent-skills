@@ -1,0 +1,4 @@
+interface:
+  display_name: "Study Studio"
+  short_description: "围绕源码与文档持续学习，自动整理可复用的问答结论并维护目标和资料路径"
+  default_prompt: "Use $study-studio to study my code and documents, answer focused questions with evidence, and maintain goals and reusable notes in a studyspace."
