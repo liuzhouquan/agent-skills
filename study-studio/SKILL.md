@@ -55,3 +55,7 @@ A note should preserve the learner's question and intent, a concise reusable con
 - Briefly report what was saved and its path. If saving fails, state that it failed and retain the intended content in the response; do not claim persistence.
 
 Keep the skill itself separate from personal study data. Invoking it authorizes local note maintenance, not publishing, committing, or pushing a learner's notes. Respect explicit requests to skip saving or keep particular information out of notes.
+
+## Design reference
+
+For the initial scope and the source-management ideas adapted from Khoj, see [references/design-context.md](references/design-context.md). This is background for evolving the skill, not a runtime dependency.
