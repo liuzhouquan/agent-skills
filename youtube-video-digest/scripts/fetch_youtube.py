@@ -69,13 +69,19 @@ def subtitle_files(folder: Path) -> list[Path]:
     )
 
 
-def preferred_subtitle(paths: list[Path]) -> Path:
+def preferred_subtitle(paths: list[Path], source_language: str | None = None) -> Path:
+    source_language = source_language.lower().split("-")[0] if source_language else None
+
     def rank(path: Path):
         name = path.name.lower()
+        language = path.stem.rsplit(".", 1)[-1].split("-")[0]
         chinese = any(tag in name for tag in (".zh", ".chi", ".zho", ".cmn"))
         english = ".en" in name or ".eng" in name
         automatic = any(tag in name for tag in (".auto.", ".ai-", ".asr."))
-        # Prefer human Chinese, then human English, then auto captions in those languages.
+        if source_language:
+            return (language != source_language, automatic, path.name)
+        # Preserve the legacy preference if source language is unknown; callers should
+        # pass it whenever the video's spoken language is known.
         return (not chinese, not english, automatic, path.name)
 
     return min(paths, key=rank)
@@ -195,6 +201,7 @@ def main() -> int:
     parser.add_argument("url")
     parser.add_argument("--output", type=Path, help="override the configured note directory")
     parser.add_argument("--sub-langs", default="all,-live_chat")
+    parser.add_argument("--source-lang", help="spoken language of the video; prioritize its matching subtitle track")
     parser.add_argument("--cookie-dir", action="append", help="search this YouTube Cookie directory; may be repeated")
     cookies = parser.add_mutually_exclusive_group()
     cookies.add_argument("--cookies-from-browser", metavar="BROWSER")
@@ -260,14 +267,18 @@ def main() -> int:
             "webpage_url": info.get("webpage_url"), "subtitles": [str(path) for path in paths],
         }
         if paths:
-            selected = preferred_subtitle(paths)
+            source_language = args.source_lang or info.get("language") or info.get("original_language")
+            selected = preferred_subtitle(paths, source_language)
             try:
                 transcript = folder / "transcript.txt"
                 convert(selected, transcript)
             except (OSError, ValueError, TypeError) as error:
                 print(f"字幕解析失败：{error}", file=sys.stderr)
                 return 4
-            manifest.update(status="transcript-ready", selected_subtitle=str(selected), transcript=str(transcript))
+            manifest.update(
+                status="transcript-ready", selected_subtitle=str(selected), transcript=str(transcript),
+                source_language=source_language,
+            )
             print(f"已提取：{info.get('title', video_id)}\n文字稿：{transcript}")
         else:
             reason = failure_reason(info, result.stderr or "", cookie_configured)

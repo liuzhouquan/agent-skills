@@ -17,7 +17,7 @@ Run the helper from the skill's own directory:
 python3 <skill-dir>/scripts/fetch_youtube.py "https://www.youtube.com/watch?v=..."
 ```
 
-The helper uses yt-dlp, downloads YouTube subtitles and metadata, and creates `<notes-dir>/<video-id>/transcript.txt` plus `manifest.json`. The note directory comes from the private user config and must not be hard-coded into this skill or its public documentation. It defaults to one video with `--no-playlist`, keeps cached subtitle files on reruns, prefers Chinese subtitles, then English, and excludes live chat. Read the manifest and the entire transcript before writing `note.md` beside them.
+The helper uses yt-dlp, downloads YouTube subtitles and metadata, and creates `<notes-dir>/<video-id>/transcript.txt` plus `manifest.json`. The note directory comes from the private user config and must not be hard-coded into this skill or its public documentation. It defaults to one video with `--no-playlist`, keeps cached subtitle files on reruns, and excludes live chat. Identify the video's spoken language from reliable metadata or clear context, then pass it with `--source-lang` so the helper selects that language even when translated tracks are also available. If the spoken language is unclear, ask before choosing a transcript language. Read the manifest and the entire transcript before writing `note.md` beside them.
 
 For a request to summarize a video, use the full fetch → read transcript → write note workflow, then give the user a concise summary in chat. The local note is an artifact, not a substitute for answering the request. Resolve `<skill-dir>` to the directory containing this `SKILL.md`; do not assume the skill is installed at a particular global path.
 
@@ -35,7 +35,7 @@ python3 <skill-dir>/scripts/configure_cookies.py --set-notes-dir "/absolute/path
 
 Use `--output` for a one-off override, or `YOUTUBE_NOTES_DIR` to override the configured directory without editing the file. Do not commit the config file to the public skills repository.
 
-Use `--sub-langs all,-live_chat` or another yt-dlp language expression when a particular language is needed. Accept standard `youtube.com`, `m.youtube.com`, `music.youtube.com`, and `youtu.be` video URLs. A playlist URL is not a request to summarize every item: ask for a specific video URL or process only the selected video.
+Use `--source-lang en` to select English subtitles for an English video; add `--sub-langs en` when retrieval should be limited to English tracks. `--source-lang` controls which subtitle is read, while the user's explicit output-language request controls the language of the note. Accept standard `youtube.com`, `m.youtube.com`, `music.youtube.com`, and `youtu.be` video URLs. A playlist URL is not a request to summarize every item: ask for a specific video URL or process only the selected video.
 
 Write useful Chinese notes with source/title/channel/date/duration when available, a summary, timestamped key points, examples and practical takeaways. Distinguish the speaker's claims from verified facts. Label notes as based on subtitles. Do not claim to have watched visual demonstrations from subtitles alone; for slides, code, charts, or sparse dialogue, inspect representative frames when video and vision tools are available, otherwise state the limitation.
 
