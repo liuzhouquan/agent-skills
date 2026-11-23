@@ -147,12 +147,18 @@ def failure_message(video_id: str, reason: str) -> str:
     return f"{video_id} 未获得字幕：{detail}"
 
 
+def js_runtime_options() -> list[str]:
+    """Enable Node for YouTube's JavaScript challenge when it is available."""
+    node = shutil.which("node")
+    return ["--js-runtimes", f"node:{node}"] if node else []
+
+
 def build_command(executable: str, url: str, output: Path, sub_langs: str, cookies: list[str]) -> list[str]:
     return [
         executable, "--ignore-config", "--no-playlist", "--skip-download",
         "--write-subs", "--write-auto-subs", "--write-info-json",
         "--print-json", "--no-simulate", "--no-progress", "--socket-timeout", "20",
-        "--retries", "2", "--sub-langs", sub_langs,
+        "--retries", "2", *js_runtime_options(), "--sub-langs", sub_langs,
         "--sub-format", "srt/vtt/best",
         "-o", str(output / "%(id)s" / "%(id)s.%(ext)s"),
         *cookies, "--", url,
