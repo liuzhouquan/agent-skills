@@ -69,17 +69,29 @@ def subtitle_files(folder: Path) -> list[Path]:
     )
 
 
+def subtitle_language(path: Path) -> str:
+    """Read the language suffix from yt-dlp's video-id.language subtitle filename."""
+    return path.stem.rsplit(".", 1)[-1].lower().split("-")[0]
+
+
+def language_matches(path: Path, source_language: str | None) -> bool:
+    if not source_language:
+        return True
+    source_language = source_language.lower().split("-")[0]
+    return subtitle_language(path) == source_language
+
+
 def preferred_subtitle(paths: list[Path], source_language: str | None = None) -> Path:
-    source_language = source_language.lower().split("-")[0] if source_language else None
+    if source_language:
+        paths = [path for path in paths if language_matches(path, source_language)]
+        if not paths:
+            raise ValueError(f"no subtitle track matches source language {source_language}")
 
     def rank(path: Path):
         name = path.name.lower()
-        language = path.stem.rsplit(".", 1)[-1].split("-")[0]
         chinese = any(tag in name for tag in (".zh", ".chi", ".zho", ".cmn"))
         english = ".en" in name or ".eng" in name
         automatic = any(tag in name for tag in (".auto.", ".ai-", ".asr."))
-        if source_language:
-            return (language != source_language, automatic, path.name)
         # Preserve the legacy preference if source language is unknown; callers should
         # pass it whenever the video's spoken language is known.
         return (not chinese, not english, automatic, path.name)
@@ -178,8 +190,19 @@ def has_subtitles(metadata: list[dict], output: Path) -> bool:
     )
 
 
+def has_language_subtitles(metadata: list[dict], output: Path, source_language: str | None) -> bool:
+    if not source_language:
+        return has_subtitles(metadata, output)
+    return any(
+        language_matches(path, source_language)
+        for info in metadata
+        if isinstance(info.get("id"), str) and safe_video_id(info["id"])
+        for path in subtitle_files(output / info["id"])
+    )
+
+
 def run_with_cookie_options(
-    executable: str, args: argparse.Namespace, output: Path, options: list[list[str]]
+    executable: str, args: argparse.Namespace, output: Path, options: list[list[str]],
 ) -> tuple[subprocess.CompletedProcess | None, list[dict], int]:
     """Try each Cookie candidate newest first, and stop at the first usable transcript."""
     last_result = None
@@ -191,7 +214,7 @@ def run_with_cookie_options(
         result = subprocess.run(command, text=True, capture_output=True, timeout=180, check=False)
         metadata = parse_metadata(result.stdout)
         last_result, last_metadata = result, metadata
-        if has_subtitles(metadata, output):
+        if has_language_subtitles(metadata, output, args.source_lang):
             return result, metadata, attempts
     return last_result, last_metadata, attempts
 
@@ -268,7 +291,21 @@ def main() -> int:
         }
         if paths:
             source_language = args.source_lang or info.get("language") or info.get("original_language")
-            selected = preferred_subtitle(paths, source_language)
+            matching_paths = [path for path in paths if language_matches(path, source_language)]
+            if source_language and not matching_paths:
+                manifest.update(
+                    status="no-accessible-subtitle", reason="subtitle-download-failed",
+                    auth_status="unknown" if cookie_configured else "not-configured",
+                    available_subtitle_tracks=sorted(available_subtitle_tracks(info)),
+                    source_language=source_language,
+                )
+                print(f"{video_id} 未找到与源语言 {source_language} 匹配的字幕。", file=sys.stderr)
+                missing = True
+                (folder / "manifest.json").write_text(
+                    json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8",
+                )
+                continue
+            selected = preferred_subtitle(matching_paths or paths, source_language)
             try:
                 transcript = folder / "transcript.txt"
                 convert(selected, transcript)
