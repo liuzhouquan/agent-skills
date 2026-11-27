@@ -10,7 +10,7 @@ Resolve in this order: explicit user path; current studyspace/nearest parent wit
 
 ## Required local entry and state
 
-Create `AGENTS.md` in each studyspace with these instructions: use Study Studio when available, read `state.md`, `goal.md`, `plan.md`, `assets.json`, and `note/README.md`, follow relevant notes/session references, verify current source identity, save learning state, and keep personal records local. Include the same recovery steps so another agent can proceed even without the skill installed.
+Create `AGENTS.md` in each studyspace with these instructions: use Study Studio when available, read `state.md`, `goal.md`, `plan.md`, `assets.json`, relevant `qa.md` topics, and `note/README.md`, follow relevant notes/session references, verify current source identity, save learning state, and keep personal records local. Include the same recovery steps so another agent can proceed even without the skill installed.
 
 `state.md` contains:
 
@@ -25,13 +25,13 @@ Create `AGENTS.md` in each studyspace with these instructions: use Study Studio 
 
 Initialize unknown details explicitly as unknown. A newly created workspace has no source evidence, no achieved mastery, and no learning history until real study occurs. Do not assume that a similarly named repository is the source.
 
-After meaningful work, add `sessions/<date>-<unique-session-id>.md` with the question, agent/session identifier, changes, evidence/commands actually observed, remaining gaps, and next action. Update `state.md` to point to it. This is a compact handoff, not a raw transcript. Keep goals/mastery in `goal.md`, learning sequence and resource ranges in `plan.md`, conclusions in `note/`, and source paths in `assets.json`; state links to those records rather than duplicating them.
+After meaningful work, add `sessions/<date>-<unique-session-id>.md` with the question, agent/session identifier, changes, evidence/commands actually observed, remaining gaps, and next action. Update `state.md` to point to it. This is a compact handoff, not a raw transcript. Keep goals/mastery in `goal.md`, learning sequence and resource ranges in `plan.md`, questions/preliminary answers in `qa.md`, agreed topic syntheses in `note/`, and source paths in `assets.json`; state links to those records rather than duplicating them.
 
 On resume, read the current state and last session record, then the linked goals, resource metadata, and relevant notes. Verify sources supporting the next action. Briefly state where study stopped and what comes next. Missing or conflicting state is an explicit gap, not permission to invent completed work.
 
 ## Multiple agents
 
-Sequential handoff works from shared files without access to the previous chat. Before editing shared records, reread them and claim a bounded task with a unique session/agent ID. Use separate note/session filenames for independent tasks. One coordinator merges shared goal, state, index, and registry updates. Recheck file contents before saving; if they changed, merge or coordinate rather than overwriting another agent's work. Increment the state revision on each shared update.
+Sequential handoff works from shared files without access to the previous chat. Before editing shared records, reread them and claim a bounded task with a unique session/agent ID. Independent agents can prepare separate temporary outputs; the coordinator merges related questions into `qa.md`. Use distinct session filenames where necessary, and create formal topic notes only under the consolidation workflow. One coordinator merges shared goal, state, index, and registry updates. Recheck file contents before saving; if they changed, merge or coordinate rather than overwriting another agent's work. Increment the state revision on each shared update.
 
 Work claims are advisory, not a locking implementation. True simultaneous writers must use a filesystem lock for read-modify-write operations or an agreed single writer. Write JSON to a temporary file in the same directory and atomically replace it under that coordination; atomic replacement alone does not prevent lost updates. Do not steal a claim merely because it looks old: confirm the owner has stopped or ask before reassignment.
 
