@@ -12,8 +12,12 @@ Help the learner investigate concrete questions and turn the answers into reusab
 - Honor an explicitly chosen notes directory. Otherwise look for a matching existing studyspace beside the primary resource before creating one.
 - Default to `<primary-resource-parent>/<primary-resource-name>-studyspace/`. For `/work/project/` use `/work/project-studyspace/`; for `/docs/book.pdf` use `/docs/book-studyspace/`. With several resources, use the user-designated primary resource, or the first resource supplied. Without a local resource, default to `~/study-studio/<topic>-studyspace/`.
 - Tell the user the exact resolved studyspace path when creating or first resuming it. Do not require confirmation for this ordinary local note creation. Never overwrite an unrelated directory; use a descriptive distinct topic name when needed.
-- Read existing `goal.md`, `assets.json`, and relevant notes before continuing. Keep unresolved questions and the next action so another session can resume. If no matching workspace can be identified, ask for its location rather than inventing prior progress.
+- When already inside a studyspace, use its `AGENTS.md` and `state.md` first. Read `goal.md`, `assets.json`, the note index, and only relevant notes next. For requests such as “continue learning <topic>”, resolve the topic through the private registry described in [references/resume-and-collaboration.md](references/resume-and-collaboration.md). Ask only if several matches remain ambiguous or the workspace cannot be found. Never invent prior progress.
 - Initialize only the small structure in [references/studyspace.md](references/studyspace.md). Resources can stay where they are. Register paths rather than relocating or copying files by default. Use `resources/` for user-provided copies when useful or requested.
+
+## Resume and collaborate
+
+Each studyspace is an independent learning project. Follow [references/resume-and-collaboration.md](references/resume-and-collaboration.md) when creating, resuming, handing off, or coordinating a project. Maintain `state.md` as the authoritative current position and `sessions/` as concise session handoff records. Keep personal paths, aliases, study content, and the workspace registry outside the distributable skill.
 
 ## Goals and learning context
 
@@ -51,7 +55,7 @@ A note should preserve the learner's question and intent, a concise reusable con
 - Use one stable note per coherent question or tightly related group. Update an existing note for follow-ups; link a separate note when the question becomes independently useful.
 - Distinguish user statements from assistant synthesis. Retain important caveats, evidence, and changes of understanding when revising.
 - Link the note to goal IDs and resource IDs. Update the note index in `note/README.md` and progress in `goal.md` after meaningful resolution or a goal change.
-- At interruption or session end, persist the current question, known evidence, remaining uncertainty, and next action even if the question remains open.
+- At interruption or session end, update `state.md` with the current question, evidence, uncertainty, and next action. Write a concise session handoff record for meaningful progress even if the question remains open.
 - Briefly report what was saved and its path. If saving fails, state that it failed and retain the intended content in the response; do not claim persistence.
 
 Keep the skill itself separate from personal study data. Invoking it authorizes local note maintenance, not publishing, committing, or pushing a learner's notes. Respect explicit requests to skip saving or keep particular information out of notes.

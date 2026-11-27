@@ -4,6 +4,10 @@ Create and maintain this structure in the resolved studyspace, not in the skill 
 
 ```text
 <topic>-studyspace/
+  AGENTS.md                  # local entry instructions for any agent
+  state.md                   # authoritative current position and work claims
+  sessions/                  # concise dated handoff records
+  .gitignore                 # private by default
   goal.md
   assets.json
   note/
@@ -38,12 +42,8 @@ Create and maintain this structure in the resolved studyspace, not in the skill 
 - Evidence and notes:
 - Remaining gap:
 
-## Current position
-- Current question / goal ID:
-- What is established:
-- Open questions:
-- Next action:
-- Last updated:
+## Progress
+See `state.md` for the current question, next action, and session handoff.
 ```
 
 Use `pending`, `in_progress`, `completed`, and `needs_review` for goals. Add checkboxes for an at-a-glance view if useful, but keep evidence and achieved level explicit. The hierarchy is flexible; do not invent child goals simply to fill the template.
@@ -129,3 +129,7 @@ and reproducible steps. Label unrun proposals.>
 ```
 
 Omit empty optional sections. Record meaningful corrections with their reason; avoid producing a new note for each follow-up message. Goal completion and note resolution are separate states.
+
+## Recovery and coordination
+
+Use [resume-and-collaboration.md](resume-and-collaboration.md) for state, session records, private registry, and shared-write conventions. `goal.md` owns target hierarchy and mastery; `state.md` owns the current position. Avoid maintaining competing current-position sections.
