@@ -10,3 +10,5 @@ Khoj is a reference for associating multiple source types with a continuing conv
 For Study Studio, a resource registry and source locators provide the initial association mechanism. Direct reading keeps existing resources usable in place. This is a design adaptation, not an implementation of Khoj indexing or synchronization. No Khoj runtime or code is bundled.
 
 The initial workflow remains deliberately small: `question/idea -> grouped draft -> assess maturity and plan impact -> agreed note or authorized plan change -> progress update`. Refine closure signals, goal hierarchy, and note organization from actual learning sessions.
+
+Interview verification draws on the inspected LLMInternSkill reference: follow the learner's claims into inputs/outputs, tradeoffs, scenarios and evidence, then turn gaps into bounded learning tasks. Study Studio adapts this into one-question-at-a-time practice within current progress, rather than a full resume-audit or project-scout workflow. The reference skill is not a runtime dependency.

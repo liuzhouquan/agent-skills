@@ -21,6 +21,7 @@ Create `AGENTS.md` in each studyspace with these instructions: use Study Studio 
 - unresolved questions and missing inputs;
 - a concrete next action;
 - last session record link;
+- optional verification checkpoint: round status/scope, original learning position, evaluated questions, pending question, draft evidence link and gaps; resume questioning only on request;
 - active work claims: agent/session ID, task scope, files owned, start/update time, and status.
 
 Initialize unknown details explicitly as unknown. A newly created workspace has no source evidence, no achieved mastery, and no learning history until real study occurs. Do not assume that a similarly named repository is the source.

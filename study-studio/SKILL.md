@@ -1,6 +1,6 @@
 ---
 name: study-studio
-description: Study code across repositories and PDF, Markdown, or text resources through focused questions, and maintain a persistent studyspace with goals, a learning route, source references, grouped drafts of questions and ideas, and consolidated notes. Use for ongoing resource-grounded learning, refining a study plan, or resuming a study topic.
+description: Study code across repositories and PDF, Markdown, or text resources through focused questions, and maintain a persistent studyspace with goals, a learning route, source references, grouped drafts of questions and ideas, and consolidated notes. Use for ongoing resource-grounded learning, refining a study plan, interview-style questioning and verification within the current learning scope, or resuming a study topic.
 ---
 
 # Study Studio
@@ -47,6 +47,12 @@ Use local resources as primary evidence and inspect only the paths or passages n
 Record resource identity in `assets.json`: canonical path, type, and a content-based description; for Git sources, sanitized remote, branch, and commit; for documents, available version information and a content hash when used. For extracted resources, also record the derivative path, tool, and source hash so stale extracts can be detected. Never store credentials in resource metadata. On resume, check availability and changes to sources supporting the current question; recheck affected conclusions and mark stale notes `needs_review`. Preserve historical evidence instead of rewriting it as current fact. If a path moved, update it after locating the actual resource.
 
 Answer directly, then explain the smallest useful evidence chain. Distinguish source facts, runtime observations, and inference. Run a focused experiment when needed and feasible; use an isolated scratch area for exercises and avoid treating unrun code as a verified result. A useful loop is `predict -> inspect -> observe -> explain -> apply -> verify`, adapted to the learner's question.
+
+## Verify learning through scoped interview questions
+
+On an actual request such as “开始验证” or “进行提问”, use [references/verification-mode.md](references/verification-mode.md). Bound questions to current learner progress and goals, ask one at a time, assess the actual answer, correct or hint when needed, and follow up within that scope. Do not activate this mode merely because the user is describing its design.
+
+End when requested or after a bounded round. Lead the debrief with whether to continue or review, naming the specific review focus and source locations; if evidence is insufficient, say so. Save good answers, gaps and new suggestions in the grouped draft, checkpoint the round for another session/agent, and update mastery only from genuine learner evidence. Implement this adaptive dialogue through agent instructions; a question-generation script is not required.
 
 ## Maintain a draft of questions, suggestions, and possible changes
 

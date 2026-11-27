@@ -147,3 +147,7 @@ Omit empty optional sections. Record meaningful corrections with their reason; a
 ## Recovery and coordination
 
 Use [resume-and-collaboration.md](resume-and-collaboration.md) for state, session records, private registry, and shared-write conventions. `goal.md` owns target hierarchy and mastery; `plan.md` owns sequence and study materials; `state.md` owns the current position. Avoid maintaining competing current-position sections.
+
+## Verification rounds
+
+For requested interview-style checks, follow [verification-mode.md](verification-mode.md). Store grouped question/answer evidence and recommendation-first debriefs under a unit topic in `draft.md`; `state.md` holds the round checkpoint and original learning position. No separate per-question files or prepopulated learner results.
