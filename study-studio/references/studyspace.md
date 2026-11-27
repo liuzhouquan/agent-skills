@@ -9,6 +9,7 @@ Create and maintain this structure in the resolved studyspace, not in the skill 
   note/
     README.md
     <question-slug>.md
+  derived/                   # optional; generated text extracts, including PDF Markdown
   resources/                 # optional; only when storing actual resources
 ```
 
@@ -61,6 +62,7 @@ A small registry, not a copied corpus. Example shape (replace illustrative value
       "id": "R1",
       "type": "code",
       "title": "service",
+      "description": "Service repository containing the request retry implementation under study.",
       "path": "/work/service",
       "git": {
         "remote": "https://github.com/example/service.git",
@@ -72,12 +74,21 @@ A small registry, not a copied corpus. Example shape (replace illustrative value
       "id": "R2",
       "type": "pdf",
       "title": "retry paper",
+      "description": "Paper describing retry strategies and backoff tradeoffs.",
       "path": "resources/retry.pdf",
+      "extracted_text": {
+        "path": "derived/pdf-text/R2.md",
+        "format": "markdown",
+        "tool": "pdftotext",
+        "source_sha256": "<observed hash>"
+      },
       "sha256": "<observed hash>"
     }
   ]
 }
 ```
+
+Every resource entry must have a concise `description` explaining what it contains and why it is relevant to this study. Base it on the file contents, repository documentation, or the user's explanation. If its role is not yet known, use a transparent placeholder such as `"description": "Purpose not yet established; inspect before relying on it."` and revisit it when the resource is inspected. Do not infer a resource's contents from its filename alone. `extracted_text` is optional and records a generated derivative; preserve the original `path` as the authoritative source.
 
 Use absolute canonical paths for external resources and studyspace-relative paths for internal resources. Types include `code`, `pdf`, `markdown`, `text`, and `other`. Omit unknown metadata instead of inventing it. Resource IDs remain stable when paths move; record revisions supporting a claim in the note so an updated registry does not erase historical provenance. For non-Git code directories, record known version information and hashes of studied files where useful. Add `last_checked` or availability information when actually checked. Validate JSON after editing.
 
