@@ -10,7 +10,7 @@ Resolve in this order: explicit user path; current studyspace/nearest parent wit
 
 ## Required local entry and state
 
-Create `AGENTS.md` in each studyspace with these instructions: use Study Studio when available, read `state.md`, `goal.md`, `assets.json`, and `note/README.md`, follow relevant notes/session references, verify current source identity, save learning state, and keep personal records local. Include the same recovery steps so another agent can proceed even without the skill installed.
+Create `AGENTS.md` in each studyspace with these instructions: use Study Studio when available, read `state.md`, `goal.md`, `plan.md`, `assets.json`, and `note/README.md`, follow relevant notes/session references, verify current source identity, save learning state, and keep personal records local. Include the same recovery steps so another agent can proceed even without the skill installed.
 
 `state.md` contains:
 
@@ -25,7 +25,7 @@ Create `AGENTS.md` in each studyspace with these instructions: use Study Studio 
 
 Initialize unknown details explicitly as unknown. A newly created workspace has no source evidence, no achieved mastery, and no learning history until real study occurs. Do not assume that a similarly named repository is the source.
 
-After meaningful work, add `sessions/<date>-<unique-session-id>.md` with the question, agent/session identifier, changes, evidence/commands actually observed, remaining gaps, and next action. Update `state.md` to point to it. This is a compact handoff, not a raw transcript. Keep goals/mastery in `goal.md`, conclusions in `note/`, and source paths in `assets.json`; state links to those records rather than duplicating them.
+After meaningful work, add `sessions/<date>-<unique-session-id>.md` with the question, agent/session identifier, changes, evidence/commands actually observed, remaining gaps, and next action. Update `state.md` to point to it. This is a compact handoff, not a raw transcript. Keep goals/mastery in `goal.md`, learning sequence and resource ranges in `plan.md`, conclusions in `note/`, and source paths in `assets.json`; state links to those records rather than duplicating them.
 
 On resume, read the current state and last session record, then the linked goals, resource metadata, and relevant notes. Verify sources supporting the next action. Briefly state where study stopped and what comes next. Missing or conflicting state is an explicit gap, not permission to invent completed work.
 

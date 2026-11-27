@@ -12,7 +12,7 @@ Help the learner investigate concrete questions and turn the answers into reusab
 - Honor an explicitly chosen notes directory. Otherwise look for a matching existing studyspace beside the primary resource before creating one.
 - Default to `<primary-resource-parent>/<primary-resource-name>-studyspace/`. For `/work/project/` use `/work/project-studyspace/`; for `/docs/book.pdf` use `/docs/book-studyspace/`. With several resources, use the user-designated primary resource, or the first resource supplied. Without a local resource, default to `~/study-studio/<topic>-studyspace/`.
 - Tell the user the exact resolved studyspace path when creating or first resuming it. Do not require confirmation for this ordinary local note creation. Never overwrite an unrelated directory; use a descriptive distinct topic name when needed.
-- When already inside a studyspace, use its `AGENTS.md` and `state.md` first. Read `goal.md`, `assets.json`, the note index, and only relevant notes next. For requests such as “continue learning <topic>”, resolve the topic through the private registry described in [references/resume-and-collaboration.md](references/resume-and-collaboration.md). Ask only if several matches remain ambiguous or the workspace cannot be found. Never invent prior progress.
+- When already inside a studyspace, use its `AGENTS.md` and `state.md` first. Read `goal.md`, `plan.md`, `assets.json`, the note index, and only relevant notes next. For requests such as “continue learning <topic>”, resolve the topic through the private registry described in [references/resume-and-collaboration.md](references/resume-and-collaboration.md). Ask only if several matches remain ambiguous or the workspace cannot be found. Never invent prior progress.
 - Initialize only the small structure in [references/studyspace.md](references/studyspace.md). Resources can stay where they are. Register paths rather than relocating or copying files by default. Use `resources/` for user-provided copies when useful or requested.
 
 ## Resume and collaborate
@@ -22,6 +22,8 @@ Each studyspace is an independent learning project. Follow [references/resume-an
 ## Goals and learning context
 
 Maintain `goal.md` as a hierarchy of goals and smaller questions with stable IDs, a target mastery level, status, achieved level, evidence links, remaining gaps, and next action. Capture relevant learner background, constraints, and intended applications only when supplied by the user; identify tentative assumptions as such. Do not infer personal traits from questions.
+
+Maintain a learner-facing `README.md` as the entry point and `plan.md` as the overall learning route. Link each planned unit to goal IDs, exact resource paths and bounded PDF pages/headings or code symbols, a practical activity, estimated time, status, and completion evidence. Make the next reading step actionable; introduce the material before asking the learner to explain it. `goal.md` owns outcomes and mastery, `plan.md` owns sequence and materials, and `state.md` owns the current position. Keep the route flexible as questions reveal gaps.
 
 Start with the user's current question. For a broad request, briefly inspect the supplied resources and offer a few bounded learning directions. Keep at most one learning unit in progress; other goals can remain pending. A unit should usually fit a focused session rather than require reading an entire project or book.
 

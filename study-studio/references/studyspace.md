@@ -4,6 +4,8 @@ Create and maintain this structure in the resolved studyspace, not in the skill 
 
 ```text
 <topic>-studyspace/
+  README.md                  # learner entry point and resource links
+  plan.md                    # learning route, units and reading ranges
   AGENTS.md                  # local entry instructions for any agent
   state.md                   # authoritative current position and work claims
   sessions/                  # concise dated handoff records
@@ -47,6 +49,12 @@ See `state.md` for the current question, next action, and session handoff.
 ```
 
 Use `pending`, `in_progress`, `completed`, and `needs_review` for goals. Add checkboxes for an at-a-glance view if useful, but keep evidence and achieved level explicit. The hierarchy is flexible; do not invent child goals simply to fill the template.
+
+## README.md and plan.md
+
+The learner entry page links original resources, searchable derivatives, goals, the roadmap, state, and note index. Point to one concrete starting unit rather than a list of unrelated resources.
+
+`plan.md` contains an ordered, adjustable route. Each unit has a stable ID, linked goal IDs, status, a mechanism-level question, exact reading links and ranges (PDF pages, Markdown headings, source symbols), an activity, estimated duration, and completion evidence. Keep at most one unit in progress; do not mark a unit started or mastered simply because the assistant prepared materials. Teach or guide reading before requiring a learner explanation. Link completed units to evidence rather than duplicating goal mastery records. State tracks the current position; the plan supplies the next unit's details.
 
 ## assets.json
 
@@ -132,4 +140,4 @@ Omit empty optional sections. Record meaningful corrections with their reason; a
 
 ## Recovery and coordination
 
-Use [resume-and-collaboration.md](resume-and-collaboration.md) for state, session records, private registry, and shared-write conventions. `goal.md` owns target hierarchy and mastery; `state.md` owns the current position. Avoid maintaining competing current-position sections.
+Use [resume-and-collaboration.md](resume-and-collaboration.md) for state, session records, private registry, and shared-write conventions. `goal.md` owns target hierarchy and mastery; `plan.md` owns sequence and study materials; `state.md` owns the current position. Avoid maintaining competing current-position sections.
