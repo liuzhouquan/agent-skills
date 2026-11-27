@@ -6,7 +6,7 @@
 
 ### `study-studio`
 
-围绕多个源码仓库、PDF、Markdown 和文本资料持续提问与学习。在指定目录或主要资料同级的 `<名称>-studyspace/` 中维护 `goal.md`、`plan.md`、`qa.md`、`note/` 和 `assets.json`，相似问题与追问先归入QA草稿，主题充分后提议整理为正式笔记，记录学习目标、背景和下一步。资源可以保留原位置，无需部署索引服务。
+围绕多个源码仓库、PDF、Markdown 和文本资料持续提问与学习。在指定目录或主要资料同级的 `<名称>-studyspace/` 中维护 `goal.md`、`plan.md`、`draft.md`、`note/` 和 `assets.json`，疑问、追问和建议先按主题归入草稿，标明成熟度、计划影响及触发条件，适时提议整理笔记或调整学习路线，记录学习目标、背景和下一步。资源可以保留原位置，无需部署索引服务。
 
 ### `source-code-learning`
 

@@ -12,7 +12,7 @@ Create and maintain this structure in the resolved studyspace, not in the skill 
   .gitignore                 # private by default
   goal.md
   assets.json
-  qa.md                      # grouped questions, preliminary answers and follow-ups
+  draft.md                      # questions, tentative ideas and proposed changes
   note/
     README.md
     <topic-slug>.md
@@ -101,37 +101,9 @@ Every resource entry must have a concise `description` explaining what it contai
 
 Use absolute canonical paths for external resources and studyspace-relative paths for internal resources. Types include `code`, `pdf`, `markdown`, `text`, and `other`. Omit unknown metadata instead of inventing it. Resource IDs remain stable when paths move; record revisions supporting a claim in the note so an updated registry does not erase historical provenance. For non-Git code directories, record known version information and hashes of studied files where useful. Add `last_checked` or availability information when actually checked. Validate JSON after editing.
 
-## qa.md
+## draft.md
 
-Maintain one shared draft, organized by topic rather than chronology. Use stable topic IDs and explicit anchors so state, goals and future notes can link reliably. Begin with a compact topic index. Read only relevant sections during later sessions.
-
-```markdown
-# Questions and preliminary answers
-
-## Topic index
-- [T1 — <Topic>](#t1)
-
-<a id="t1"></a>
-## T1 — <Topic>
-- Goals / resources:
-- Maturity: exploring
-- Last updated:
-
-### Questions and follow-ups
-- Q1: <Original question and intended use>
-- Q1.1: <Related follow-up>
-
-### Current answer and evidence
-<Concise synthesis with source locators; distinguish fact from inference.>
-
-### Uncertainty and next questions
-<What is unresolved or unverified; proposed experiments are not results.>
-
-### Consolidation
-<Only when applicable: proposed scope, pending/agreed status, or link to formal note.>
-```
-
-Topic maturity can be `exploring`, `ready_to_propose`, or `consolidated`; answered questions need not become formal notes. A formal topic note is proposed when content is coherent and supported, then created after agreement or an explicit request. After consolidation retain a summary, source question IDs, unresolved items and a link here; avoid duplicate full text. Preserve existing notes during adoption of this workflow unless reorganization is requested.
+Maintain one topic-based draft with an index and stable anchors. Each topic separates QA (questions, preliminary answers, evidence, unresolved follow-ups) from suggestions and possible changes. Use [draft-workflow.md](draft-workflow.md) for the compact topic/item template, maturity, four impact categories, and explicit triggers for consolidation or action. Preserve existing content and stable topic IDs when migrating from an older `qa.md`; update active links rather than keeping duplicate full copies.
 
 ## note/README.md
 
@@ -143,7 +115,7 @@ Maintain links to agreed, consolidated topic notes with goal IDs, resource IDs, 
 # <Topic title>
 
 - Topic ID: T1
-- Source questions: qa.md#t1
+- Source questions: draft.md#t1
 - Goals: G1.1
 - Resources: R1, R2
 - Status: open

@@ -1,6 +1,6 @@
 # Initial design context
 
-This first version extends the learning approach in `source-code-learning`: bounded questions, precise source evidence, observable mastery, and resumable progress. Study Studio adds mixed local documents, several repositories per topic, and grouped QA drafts and later consolidation into reusable topic notes.
+This first version extends the learning approach in `source-code-learning`: bounded questions, precise source evidence, observable mastery, and resumable progress. Study Studio adds mixed local documents, several repositories per topic, and grouped drafts of questions and tentative ideas and later consolidation into reusable topic notes.
 
 Khoj is a reference for associating multiple source types with a continuing conversation. Its documentation separates source ingestion/sync from the chat interface:
 
@@ -9,4 +9,4 @@ Khoj is a reference for associating multiple source types with a continuing conv
 
 For Study Studio, a resource registry and source locators provide the initial association mechanism. Direct reading keeps existing resources usable in place. This is a design adaptation, not an implementation of Khoj indexing or synchronization. No Khoj runtime or code is bundled.
 
-The initial workflow remains deliberately small: `question -> grouped QA draft -> propose topic consolidation -> agreed note -> goal/progress update`. Refine closure signals, goal hierarchy, and note organization from actual learning sessions.
+The initial workflow remains deliberately small: `question/idea -> grouped draft -> assess maturity and plan impact -> agreed note or authorized plan change -> progress update`. Refine closure signals, goal hierarchy, and note organization from actual learning sessions.
